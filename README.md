@@ -2,3 +2,5 @@
 Tool to read out data from the Sungrow inverter
 
 This is the initial content
+This is just another change
+

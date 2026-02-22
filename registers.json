@@ -1,18 +1,18 @@
 {
-    "nominal_output_power": {
-        "address": 5000,
-        "type": "uint16be",
-        "factor": 0.1,
-        "unit": "kW"
-    },
-    "daily_output_energy": {
-        "address": 5002,
+    "daily_pv_generation": {
+        "address": 13001,
         "type": "uint16be",
         "factor": 0.1,
         "unit": "kWh"
     },
-    "total_output_energy": {
-        "address": 5003,
+    "total_dc_power": {
+        "address": 5016,
+        "type": "int32sw",
+        "factor": 1,
+        "unit": "W"
+    },        
+    "total_pv_generation": {
+        "address": 13002,
         "type": "uint32sw",
         "factor": 0.1,
         "unit": "kWh"
@@ -47,17 +47,29 @@
         "factor": 0.1,
         "unit": "A"
     },
-    "grid_power": {
-        "address": 5016,
-        "type": "uint32sw",
+    "export_power": {
+        "address": 13009,
+        "type": "int32sw",
         "factor": 1,
         "unit": "W"
     },
-    "pv_power_total": {
+    "phase_a_voltage": {
         "address": 5018,
-        "type": "uint32sw",
-        "factor": 1,
-        "unit": "W"
+        "type": "uint16be",
+        "factor": 0.1,
+        "unit": "V"
+    },
+    "phase_b_voltage": {
+        "address": 5019,
+        "type": "uint16be",
+        "factor": 0.1,
+        "unit": "V"
+    },
+    "phase_c_voltage": {
+        "address": 5020,
+        "type": "uint16be",
+        "factor": 0.1,
+        "unit": "V"
     },
     "load_power": {
         "address": 5020,
@@ -66,19 +78,19 @@
         "unit": "W"
     },
     "battery_voltage": {
-        "address": 5036,
+        "address": 13019,
         "type": "uint16be",
         "factor": 0.1,
         "unit": "V"
     },
     "battery_current": {
-        "address": 5037,
+        "address": 13020,
         "type": "int16be",
         "factor": 0.1,
         "unit": "A"
     },
     "battery_power": {
-        "address": 5038,
+        "address": 13021,
         "type": "int16be",
         "factor": 1,
         "unit": "W"
@@ -89,94 +101,76 @@
         "factor": 0.1,
         "unit": "%"
     },
-    "grid_frequency": {
-        "address": 5046,
+    "battery_soh": {
+        "address": 13023,
         "type": "uint16be",
-        "factor": 0.01,
+        "factor": 0.1,
+        "unit": "%"
+    },
+    "battery_temperature": {
+        "address": 13024,
+        "type": "int16be",
+        "factor": 0.1,
+        "unit": "°C"
+    },
+    "daily_battery_discharge_energy": {
+        "address": 13025,
+        "type": "uint16be",
+        "factor": 0.1,
+        "unit": "kWh"
+    },
+    "total_battery_discharge_energy": {
+        "address": 13026,
+        "type": "uint32sw",
+        "factor": 0.1,
+        "unit": "kWh"
+    },    
+    "daily_battery_charge_energy": {
+        "address": 13011,
+        "type": "uint16be",
+        "factor": 0.1,
+        "unit": "kWh"
+    },
+    "total_battery_charge_energy": {
+        "address": 13012,
+        "type": "uint32sw",
+        "factor": 0.1,
+        "unit": "kWh"
+    },    
+    "grid_frequency": {
+        "address": 5035,
+        "type": "uint16be",
+        "factor": 0.1,
         "unit": "Hz"
     },
-    "phase_a_voltage": {
-        "address": 5047,
-        "type": "uint16be",
-        "factor": 0.1,
-        "unit": "V"
-    },
-    "phase_b_voltage": {
-        "address": 5048,
-        "type": "uint16be",
-        "factor": 0.1,
-        "unit": "V"
-    },
-    "phase_c_voltage": {
-        "address": 5049,
-        "type": "uint16be",
-        "factor": 0.1,
-        "unit": "V"
-    },
-    "work_state": {
-        "address": 5060,
-        "type": "uint16be",
+    "meter_Active_power": {
+        "address": 5600,
+        "type": "int32sw",
         "factor": 1,
-        "unit": "UNKNOWN"
+        "unit": "W"
     },
-    "fault_code": {
-        "address": 5061,
-        "type": "uint16be",
-        "factor": 1,
-        "unit": "UNKNOWN"
-    },
-    "battery_temp_1": {
-        "address": 5100,
-        "type": "int16be",
-        "factor": 0.1,
-        "unit": "°C"
-    },
-    "battery_temp_2": {
-        "address": 5101,
-        "type": "int16be",
-        "factor": 0.1,
-        "unit": "°C"
-    },
-    "battery_temp_3": {
-        "address": 5102,
-        "type": "int16be",
-        "factor": 0.1,
-        "unit": "°C"
-    },
-    "pv1_voltage": {
-        "address": 5200,
+    "daily_import_energy": {
+        "address": 13035,
         "type": "uint16be",
         "factor": 0.1,
-        "unit": "V"
+        "unit": "kWh"
     },
-    "pv1_current": {
-        "address": 5201,
+    "daily_export_energy": {
+        "address": 13044,
         "type": "uint16be",
         "factor": 0.1,
-        "unit": "A"
+        "unit": "kWh"
     },
-    "pv2_voltage": {
-        "address": 5202,
-        "type": "uint16be",
+    "total_import_energy": {
+        "address": 13036,
+        "type": "uint32sw",
         "factor": 0.1,
-        "unit": "V"
+        "unit": "kWh"
     },
-    "pv2_current": {
-        "address": 5203,
-        "type": "uint16be",
+    "total_export_energy": {
+        "address": 13045,
+        "type": "uint32sw",
         "factor": 0.1,
-        "unit": "A"
-    },
-    "battery_module_count": {
-        "address": 5300,
-        "type": "uint16be",
-        "factor": 1,
-        "unit": "UNKNOWN"
-    },
-    "battery_cycle_count": {
-        "address": 5301,
-        "type": "uint16be",
-        "factor": 1,
-        "unit": "UNKNOWN"
+        "unit": "kWh"
     }
 }

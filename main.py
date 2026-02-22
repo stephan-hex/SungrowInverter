@@ -2,12 +2,14 @@ from pymodbus.client import ModbusTcpClient
 import json
 import os
 from PV_UI import PV_UI
+from PV_Web import PV_Web
 
 # Konfiguration
 # Ersetzen Sie dies durch die tatsächliche IP-Adresse Ihres Wechselrichters oder WiNet-S Dongles
 INVERTER_IP = '192.168.178.154' 
 INVERTER_PORT = 502
 SLAVE_ID = 1  # Standard Unit ID ist meistens 1
+WEBSERVER_ON = True
 
 # Register global laden
 REGISTERS = {}
@@ -81,6 +83,11 @@ def read_modbus_data():
 
 def main():
     print("Starte UI...")
+    
+    if WEBSERVER_ON:
+        web = PV_Web(fetch_data_callback=read_modbus_data)
+        web.start()
+        
     # UI initialisieren und die Lesefunktion übergeben
     app = PV_UI(fetch_data_callback=read_modbus_data, update_interval=5000)
     app.run()

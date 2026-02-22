@@ -1,4 +1,54 @@
-<h1>
-	Hello World
-</h1>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="refresh" content="10">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sungrow Inverter Monitor</title>
+    <style>
+        body { font-family: Helvetica, Arial, sans-serif; padding: 20px; background: #f0f2f5; color: #333; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .header { display: flex; justify-content: space-between; margin-bottom: 30px; flex-wrap: wrap; gap: 20px; }
+        .header-box { text-align: center; flex: 1; min-width: 200px; }
+        .big-value { font-size: 36px; font-weight: bold; margin-top: 5px; }
+        .green { color: #2ecc71; }
+        .blue { color: #3498db; }
+        .section-title { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: #666; }
+        h3 { border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 30px; color: #444; }
+        .data-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .data-row { display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding: 8px 0; }
+        .data-label { color: #555; }
+        .data-value { font-weight: bold; }
+        .flow-box { border: 2px solid #eee; padding: 20px; text-align: center; border-radius: 8px; font-size: 20px; font-weight: bold; background: #fafafa; margin-top: 30px; transition: color 0.3s; }
+        .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #999; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-box">
+                <div class="section-title">Aktuelle Leistung (DC)</div>
+                <div class="big-value green">{total_dc_power}</div>
+            </div>
+            <div class="header-box">
+                <div class="section-title">Tagesertrag</div>
+                <div class="big-value blue">{daily_pv_generation}</div>
+            </div>
+        </div>
 
+        <h3>Betriebsdaten</h3>
+        <div class="data-grid">
+            <div class="data-row"><span class="data-label">Batterie SOC:</span> <span class="data-value">{battery_soc}</span></div>
+            <div class="data-row"><span class="data-label">Batterie Leistung:</span> <span class="data-value">{battery_power}</span></div>
+            <div class="data-row"><span class="data-label">Interne Temperatur:</span> <span class="data-value">{internal_temperature}</span></div>
+            <div class="data-row"><span class="data-label">Netzleistung (Active):</span> <span class="data-value">{meter_active_power}</span></div>
+            <div class="data-row"><span class="data-label">Import heute:</span> <span class="data-value">{daily_import_energy}</span></div>
+            <div class="data-row"><span class="data-label">Export heute:</span> <span class="data-value">{daily_export_energy}</span></div>
+            <div class="data-row"><span class="data-label">Gesamtertrag:</span> <span class="data-value">{total_pv_generation}</span></div>
+        </div>
+
+        <div class="flow-box" style="color: {flow_color}">{flow_text}</div>
+        <div class="footer">Letztes Update: {timestamp}</div>
+    </div>
+</body>
+</html>

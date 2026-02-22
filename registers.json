@@ -71,12 +71,6 @@
         "factor": 0.1,
         "unit": "V"
     },
-    "load_power": {
-        "address": 5020,
-        "type": "uint32sw",
-        "factor": 1,
-        "unit": "W"
-    },
     "battery_voltage": {
         "address": 13019,
         "type": "uint16be",
@@ -143,7 +137,7 @@
         "factor": 0.1,
         "unit": "Hz"
     },
-    "meter_Active_power": {
+    "meter_active_power": {
         "address": 5600,
         "type": "int32sw",
         "factor": 1,

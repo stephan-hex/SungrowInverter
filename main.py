@@ -3,6 +3,9 @@ import json
 import os
 from PV_UI import PV_UI
 from PV_Web import PV_Web
+from PV_Database import PV_Database
+import time
+import threading
 
 # Konfiguration
 # Ersetzen Sie dies durch die tatsächliche IP-Adresse Ihres Wechselrichters oder WiNet-S Dongles
@@ -10,6 +13,7 @@ INVERTER_IP = '192.168.178.154'
 INVERTER_PORT = 502
 SLAVE_ID = 1  # Standard Unit ID ist meistens 1
 WEBSERVER_ON = True
+DB_UPDATE_INTERVAL = 60 # Sekunden
 
 # Register global laden
 REGISTERS = {}
@@ -19,8 +23,11 @@ try:
 except Exception as e:
     print(f"Fehler beim Laden der registers.json: {e}")
 
-def read_modbus_data():
-    """Liest alle Register aus und gibt ein Dictionary zurück"""
+# Datenbank initialisieren
+pv_db = PV_Database(registers_dict=REGISTERS)
+
+def read_raw_modbus_data():
+    """Liest alle Register aus und gibt ein Dictionary mit Rohwerten (Zahlen) zurück"""
     client = ModbusTcpClient(INVERTER_IP, port=INVERTER_PORT)
     data_output = {}
 
@@ -61,17 +68,10 @@ def read_modbus_data():
 
                     final_val = val * factor
                     
-                    # Formatierung: Float bei Faktor < 1, sonst Int-Darstellung (wenn möglich)
-                    if name == 'total_pv_generation':
-                        # Spezielle Umrechnung und Formatierung für Gesamtertrag in MWh
-                        mwh_val = final_val / 1000
-                        data_output[name] = f"{mwh_val:.2f} MWh"
-                    elif isinstance(final_val, float):
-                        data_output[name] = f"{final_val:.2f} {unit}"
-                    else:
-                        data_output[name] = f"{final_val} {unit}"
+                    # Rohwert speichern (für DB oder Weiterverarbeitung)
+                    data_output[name] = final_val
                 else:
-                    data_output[name] = "Error"
+                    data_output[name] = None # None ist besser für DB als "Error" String
         except Exception as e:
             print(f"Fehler beim Lesen: {e}")
         finally:
@@ -81,15 +81,58 @@ def read_modbus_data():
     
     return data_output
 
+def format_data_for_ui(raw_data):
+    """Formatiert die Rohdaten für die Anzeige (Strings mit Einheiten)"""
+    formatted = {}
+    for name, val in raw_data.items():
+        if val is None:
+            formatted[name] = "Error"
+            continue
+            
+        unit = REGISTERS.get(name, {}).get('unit', '')
+        
+        # Spezielle Umrechnung und Formatierung für Gesamtertrag in MWh
+        if name == 'total_pv_generation':
+            mwh_val = val / 1000
+            formatted[name] = f"{mwh_val:.2f} MWh"
+        elif isinstance(val, float):
+            formatted[name] = f"{val:.2f} {unit}"
+        else:
+            formatted[name] = f"{val} {unit}"
+    return formatted
+
+def read_modbus_data_callback():
+    """Wrapper für UI/Web: Holt Rohdaten und formatiert sie."""
+    raw = read_raw_modbus_data()
+    
+    # Daten für die Datenbank vorbereiten (sammeln)
+    # Zeitstempel als EPOCH
+    current_time = time.time()
+    pv_db.prepare_data(raw, current_time)
+    
+    return format_data_for_ui(raw)
+
+def db_persist_loop():
+    """Hintergrund-Loop, der alle DB_UPDATE_INTERVAL Sekunden die Daten speichert"""
+    while True:
+        time.sleep(DB_UPDATE_INTERVAL)
+        pv_db.persist_data()
+
 def main():
     print("Starte UI...")
+    print(f"Datenbank-Aufzeichnung aktiv (Intervall: {DB_UPDATE_INTERVAL}s)")
     
     if WEBSERVER_ON:
-        web = PV_Web(fetch_data_callback=read_modbus_data)
+        web = PV_Web(fetch_data_callback=read_modbus_data_callback)
         web.start()
         
     # UI initialisieren und die Lesefunktion übergeben
-    app = PV_UI(fetch_data_callback=read_modbus_data, update_interval=5000)
+    app = PV_UI(fetch_data_callback=read_modbus_data_callback, update_interval=5000)
+    
+    # Datenbank-Thread starten (Daemon, damit er beim Beenden des Programms mit stirbt)
+    db_thread = threading.Thread(target=db_persist_loop, daemon=True)
+    db_thread.start()
+    
     app.run()
 
 if __name__ == "__main__":

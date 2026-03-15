@@ -20,6 +20,7 @@ SLAVE_ID = 1  # Standard Unit ID ist meistens 1
 WEBSERVER_ON = True
 DB_UPDATE_INTERVAL = 60 # Sekunden (Schreiben in die DB)
 POLL_INTERVAL = 5 # Sekunden (Abfrageintervall, ersetzt den UI-Refresh)
+LOGGING_ENABLED = True
 
 # Register global laden
 REGISTERS = {}
@@ -29,8 +30,14 @@ try:
 except Exception as e:
     print(f"Fehler beim Laden der registers.json: {e}")
 
-# Logger initialisieren
-logger = PV_Logger()
+# Logger initialisieren (oder einen Dummy, wenn deaktiviert)
+if LOGGING_ENABLED:
+    logger = PV_Logger()
+else:
+    class DummyLogger:
+        def log_error(self, message):
+            pass
+    logger = DummyLogger()
 
 # Datenbank initialisieren
 pv_db = PV_Database(registers_dict=REGISTERS)

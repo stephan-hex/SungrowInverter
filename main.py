@@ -19,6 +19,7 @@ INVERTER_PORT = 502
 SLAVE_ID = 1  # Standard Unit ID ist meistens 1
 WEBSERVER_ON = True
 DB_UPDATE_INTERVAL = 60 # Sekunden
+LOGGING_ENABLED = True
 
 # Register global laden
 REGISTERS = {}
@@ -30,8 +31,14 @@ except Exception as e:
     # Da logger noch nicht initialisiert ist, hier Quick-Fix oder Logger früher init.
     # Wir initieren ihn gleich danach, aber für diesen Block nutzen wir print.
 
-# Logger initialisieren
-logger = PV_Logger()
+# Logger initialisieren (oder einen Dummy, wenn deaktiviert)
+if LOGGING_ENABLED:
+    logger = PV_Logger()
+else:
+    class DummyLogger:
+        def log_error(self, message):
+            pass
+    logger = DummyLogger()
 
 # Datenbank initialisieren
 pv_db = PV_Database(registers_dict=REGISTERS)

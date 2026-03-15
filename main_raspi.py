@@ -5,6 +5,7 @@ from PV_Web import PV_Web
 from PV_Database import PV_Database
 import time
 import threading
+import signal
 
 # Konfiguration
 # Ersetzen Sie dies durch die tatsächliche IP-Adresse Ihres Wechselrichters oder WiNet-S Dongles
@@ -126,6 +127,14 @@ def db_persist_loop():
         time.sleep(DB_UPDATE_INTERVAL)
         pv_db.persist_data()
 
+# Globales Flag für den sauberen Shutdown
+running = True
+
+def handle_sigterm(signum, frame):
+    global running
+    print(f"Signal {signum} empfangen (System-Shutdown/Reboot). Beende Schleife...")
+    running = False
+
 def main():
     print("Starte Sungrow Inverter Monitor (Raspi / Headless)...")
     print(f"Datenbank-Aufzeichnung aktiv (Intervall: {DB_UPDATE_INTERVAL}s)")
@@ -138,20 +147,26 @@ def main():
     db_thread = threading.Thread(target=db_persist_loop, daemon=True)
     db_thread.start()
     
+    # Signal-Handler für SIGTERM (wird von 'sudo reboot' oder systemd stop gesendet) registrieren
+    signal.signal(signal.SIGTERM, handle_sigterm)
+    
     print(f"Programm läuft. Daten werden alle {POLL_INTERVAL}s abgerufen. Drücke STRG+C zum Beenden.")
     
     try:
-        while True:
+        while running:
             # Regelmäßiges Abfragen der Daten (ersetzt den UI-Loop)
             # Der Aufruf füllt den Puffer der Datenbankklasse
             read_modbus_data_callback()
             time.sleep(POLL_INTERVAL)
             
     except KeyboardInterrupt:
-        print("\nBeende Programm...")
+        print("\nManueller Abbruch (STRG+C)...")
+    finally:
+        # Dieser Block wird IMMER ausgeführt (bei Fehler, STRG+C oder SIGTERM)
+        print("Führe Cleanup durch...")
         pv_db.persist_data() # Letzte Daten aus dem Puffer speichern
         pv_db.close()
-        print("Datenbank geschlossen.")
+        print("Datenbank geschlossen. Bye.")
 
 if __name__ == "__main__":
     main()

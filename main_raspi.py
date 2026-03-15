@@ -7,6 +7,10 @@ import time
 import threading
 import signal
 
+# Metadaten
+APP_NAME = "Sungrow Inverter Monitor (Headless)"
+VERSION = "1.1.0"
+
 # Konfiguration
 # Ersetzen Sie dies durch die tatsächliche IP-Adresse Ihres Wechselrichters oder WiNet-S Dongles
 INVERTER_IP = '192.168.178.154' 
@@ -43,17 +47,33 @@ def read_raw_modbus_data():
                 # 32-Bit Werte benötigen 2 Register, sonst 1
                 count = 2 if '32' in dtype else 1
                 
-                # Robuste Methode, um mit allen pymodbus-Versionen (v2/v3) kompatibel zu sein.
-                # Reihenfolge: device_id (neueste v3) -> slave (ältere v3) -> unit (v2)
-                try:
-                    rr = client.read_input_registers(address=addr, count=count, device_id=SLAVE_ID)
-                except TypeError:
+                rr = None
+                # Retry-Logik: Bis zu 3 Versuche pro Register, falls Verbindung abbricht (Broken Pipe)
+                for attempt in range(3):
                     try:
-                        rr = client.read_input_registers(address=addr, count=count, slave=SLAVE_ID)
-                    except TypeError:
-                        rr = client.read_input_registers(address=addr, count=count, unit=SLAVE_ID)
+                        # Robuste Methode für alle pymodbus Versionen
+                        try:
+                            rr = client.read_input_registers(address=addr, count=count, device_id=SLAVE_ID)
+                        except TypeError:
+                            try:
+                                rr = client.read_input_registers(address=addr, count=count, slave=SLAVE_ID)
+                            except TypeError:
+                                rr = client.read_input_registers(address=addr, count=count, unit=SLAVE_ID)
+                        
+                        if not rr.isError():
+                            break # Erfolgreich gelesen
+                    except Exception:
+                        # Bei Fehler (z.B. Broken Pipe) kurz warten und Reconnect
+                        print("Exception beim Lesen:")
+                        time.sleep(0.5)
+                        client.close()
+                        time.sleep(0.5)
+                        client.connect()
                 
-                if not rr.isError():
+                # Kurze Pause, um den Wechselrichter/Dongle nicht zu überlasten (verhindert Connection Reset)
+                time.sleep(0.05)
+                
+                if rr and not rr.isError():
                     regs = rr.registers
                     val = 0
                     
@@ -136,7 +156,7 @@ def handle_sigterm(signum, frame):
     running = False
 
 def main():
-    print("Starte Sungrow Inverter Monitor (Raspi / Headless)...")
+    print(f"Starte {APP_NAME} Version: {VERSION}")
     print(f"Datenbank-Aufzeichnung aktiv (Intervall: {DB_UPDATE_INTERVAL}s)")
     
     if WEBSERVER_ON:

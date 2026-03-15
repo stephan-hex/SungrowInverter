@@ -4,8 +4,13 @@ import os
 from PV_UI import PV_UI
 from PV_Web import PV_Web
 from PV_Database import PV_Database
+from PV_Logger import PV_Logger
 import time
 import threading
+
+# Metadaten
+APP_NAME = "Sungrow Inverter Monitor"
+VERSION = "1.1.0"
 
 # Konfiguration
 # Ersetzen Sie dies durch die tatsächliche IP-Adresse Ihres Wechselrichters oder WiNet-S Dongles
@@ -22,6 +27,11 @@ try:
         REGISTERS = json.load(f)
 except Exception as e:
     print(f"Fehler beim Laden der registers.json: {e}")
+    # Da logger noch nicht initialisiert ist, hier Quick-Fix oder Logger früher init.
+    # Wir initieren ihn gleich danach, aber für diesen Block nutzen wir print.
+
+# Logger initialisieren
+logger = PV_Logger()
 
 # Datenbank initialisieren
 pv_db = PV_Database(registers_dict=REGISTERS)
@@ -42,9 +52,32 @@ def read_raw_modbus_data():
                 # 32-Bit Werte benötigen 2 Register, sonst 1
                 count = 2 if '32' in dtype else 1
                 
-                rr = client.read_input_registers(address=addr, count=count, slave=SLAVE_ID)
+                rr = None
+                # Retry-Logik: Bis zu 3 Versuche pro Register, falls Verbindung abbricht (Broken Pipe)
+                for attempt in range(3):
+                    try:
+                        # Robuste Methode für alle pymodbus Versionen
+                        try:
+                            rr = client.read_input_registers(address=addr, count=count, device_id=SLAVE_ID)
+                        except TypeError:
+                            try:
+                                rr = client.read_input_registers(address=addr, count=count, slave=SLAVE_ID)
+                            except TypeError:
+                                rr = client.read_input_registers(address=addr, count=count, unit=SLAVE_ID)
+                        
+                        if not rr.isError():
+                            break # Erfolgreich gelesen
+                    except Exception as e:
+                        # Bei Fehler (z.B. Broken Pipe) kurz warten und Reconnect
+                        logger.log_error(f"Lese-Versuch {attempt+1} fehlgeschlagen für {name}: {e}")
+                        time.sleep(0.5)
+                        client.close()
+                        client.connect()
                 
-                if not rr.isError():
+                # Kurze Pause, um den Wechselrichter/Dongle nicht zu überlasten (verhindert Connection Reset)
+                time.sleep(0.05)
+                
+                if rr and not rr.isError():
                     regs = rr.registers
                     val = 0
                     
@@ -73,11 +106,15 @@ def read_raw_modbus_data():
                 else:
                     data_output[name] = None # None ist besser für DB als "Error" String
         except Exception as e:
-            print(f"Fehler beim Lesen: {e}")
+            msg = f"Fehler beim Lesen der Register: {e}"
+            print(msg)
+            logger.log_error(msg)
         finally:
             client.close()
     else:
-        print("Keine Verbindung zum Wechselrichter")
+        msg = "Keine Verbindung zum Wechselrichter möglich"
+        print(msg)
+        logger.log_error(msg)
     
     return data_output
 
@@ -119,7 +156,7 @@ def db_persist_loop():
         pv_db.persist_data()
 
 def main():
-    print("Starte UI...")
+    print(f"Starte {APP_NAME} Version: {VERSION}")
     print(f"Datenbank-Aufzeichnung aktiv (Intervall: {DB_UPDATE_INTERVAL}s)")
     
     if WEBSERVER_ON:

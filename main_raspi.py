@@ -3,6 +3,7 @@ import json
 import os
 from PV_Web import PV_Web
 from PV_Database import PV_Database
+from PV_Logger import PV_Logger
 import time
 import threading
 import signal
@@ -27,7 +28,10 @@ try:
         REGISTERS = json.load(f)
 except Exception as e:
     print(f"Fehler beim Laden der registers.json: {e}")
-12
+
+# Logger initialisieren
+logger = PV_Logger()
+
 # Datenbank initialisieren
 pv_db = PV_Database(registers_dict=REGISTERS)
 
@@ -62,9 +66,9 @@ def read_raw_modbus_data():
                         
                         if not rr.isError():
                             break # Erfolgreich gelesen
-                    except Exception:
+                    except Exception as e:
                         # Bei Fehler (z.B. Broken Pipe) kurz warten und Reconnect
-                        print("Exception beim Lesen:")
+                        logger.log_error(f"Lese-Versuch {attempt+1} fehlgeschlagen für {name}: {e}")
                         time.sleep(0.5)
                         client.close()
                         time.sleep(0.5)
@@ -102,11 +106,15 @@ def read_raw_modbus_data():
                 else:
                     data_output[name] = None # None ist besser für DB als "Error" String
         except Exception as e:
-            print(f"Fehler beim Lesen: {e}")
+            msg = f"Fehler beim Lesen der Register: {e}"
+            print(msg)
+            logger.log_error(msg)
         finally:
             client.close()
     else:
-        print("Keine Verbindung zum Wechselrichter")
+        msg = "Keine Verbindung zum Wechselrichter möglich"
+        print(msg)
+        logger.log_error(msg)
     
     return data_output
 

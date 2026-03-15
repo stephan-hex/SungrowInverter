@@ -1,5 +1,4 @@
 from pymodbus.client import ModbusTcpClient
-import pymodbus
 import json
 import os
 from PV_Web import PV_Web
@@ -23,7 +22,7 @@ try:
         REGISTERS = json.load(f)
 except Exception as e:
     print(f"Fehler beim Laden der registers.json: {e}")
-
+12
 # Datenbank initialisieren
 pv_db = PV_Database(registers_dict=REGISTERS)
 
@@ -43,9 +42,15 @@ def read_raw_modbus_data():
                 # 32-Bit Werte benötigen 2 Register, sonst 1
                 count = 2 if '32' in dtype else 1
                 
-                # Automatische Wahl zwischen 'slave' (v3.x) und 'unit' (v2.x)
-                read_kwargs = {'slave': SLAVE_ID} if pymodbus.__version__.startswith('3') else {'unit': SLAVE_ID}
-                rr = client.read_input_registers(address=addr, count=count, **read_kwargs)
+                # Robuste Methode, um mit allen pymodbus-Versionen (v2/v3) kompatibel zu sein.
+                # Reihenfolge: device_id (neueste v3) -> slave (ältere v3) -> unit (v2)
+                try:
+                    rr = client.read_input_registers(address=addr, count=count, device_id=SLAVE_ID)
+                except TypeError:
+                    try:
+                        rr = client.read_input_registers(address=addr, count=count, slave=SLAVE_ID)
+                    except TypeError:
+                        rr = client.read_input_registers(address=addr, count=count, unit=SLAVE_ID)
                 
                 if not rr.isError():
                     regs = rr.registers

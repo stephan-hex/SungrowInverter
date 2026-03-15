@@ -1,4 +1,5 @@
 from pymodbus.client import ModbusTcpClient
+import pymodbus
 import json
 import os
 from PV_Web import PV_Web
@@ -42,7 +43,9 @@ def read_raw_modbus_data():
                 # 32-Bit Werte benötigen 2 Register, sonst 1
                 count = 2 if '32' in dtype else 1
                 
-                rr = client.read_input_registers(address=addr, count=count, slave=SLAVE_ID)
+                # Automatische Wahl zwischen 'slave' (v3.x) und 'unit' (v2.x)
+                read_kwargs = {'slave': SLAVE_ID} if pymodbus.__version__.startswith('3') else {'unit': SLAVE_ID}
+                rr = client.read_input_registers(address=addr, count=count, **read_kwargs)
                 
                 if not rr.isError():
                     regs = rr.registers

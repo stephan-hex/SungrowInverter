@@ -10,7 +10,7 @@ import signal
 
 # Metadaten
 APP_NAME = "Sungrow Inverter Monitor (Headless)"
-VERSION = "1.1.0"
+VERSION = "1.1.1"
 
 # Konfiguration
 # Ersetzen Sie dies durch die tatsächliche IP-Adresse Ihres Wechselrichters oder WiNet-S Dongles
@@ -53,7 +53,6 @@ def read_raw_modbus_data():
                 addr = data['address']
                 dtype = data['type']
                 factor = data['factor']
-                unit = data['unit']
                 
                 # 32-Bit Werte benötigen 2 Register, sonst 1
                 count = 2 if '32' in dtype else 1
@@ -145,8 +144,12 @@ def format_data_for_ui(raw_data):
             formatted[name] = f"{val} {unit}"
     return formatted
 
+# Cache der zuletzt gepollteten Daten für den Webserver
+last_data_cache = {}
+
 def read_modbus_data_callback():
-    """Wrapper für UI/Web: Holt Rohdaten und formatiert sie."""
+    """Wrapper für Poll-Loop: Holt Rohdaten, aktualisiert DB-Puffer und Cache."""
+    global last_data_cache
     raw = read_raw_modbus_data()
     
     # Daten für die Datenbank vorbereiten (sammeln)
@@ -154,7 +157,14 @@ def read_modbus_data_callback():
     current_time = time.time()
     pv_db.prepare_data(raw, current_time)
     
-    return format_data_for_ui(raw)
+    last_data_cache = format_data_for_ui(raw)
+    return last_data_cache
+
+def get_cached_data():
+    """Gibt den zuletzt gepollteten Datensatz zurück (kein Modbus-Zugriff)."""
+    if last_data_cache:
+        return last_data_cache
+    return read_modbus_data_callback()
 
 def db_persist_loop():
     """Hintergrund-Loop, der alle DB_UPDATE_INTERVAL Sekunden die Daten speichert"""
@@ -162,28 +172,31 @@ def db_persist_loop():
         time.sleep(DB_UPDATE_INTERVAL)
         pv_db.persist_data()
 
-# Globales Flag für den sauberen Shutdown
+# Globales Flag und Event für den sauberen Shutdown
 running = True
+stop_event = threading.Event()
 
 def handle_sigterm(signum, frame):
     global running
     print(f"Signal {signum} empfangen (System-Shutdown/Reboot). Beende Schleife...")
     running = False
+    stop_event.set()  # Poll-Loop sofort aufwecken
 
 def main():
     print(f"Starte {APP_NAME} Version: {VERSION}")
     print(f"Datenbank-Aufzeichnung aktiv (Intervall: {DB_UPDATE_INTERVAL}s)")
     
+    # Signal-Handler früh registrieren, bevor Threads gestartet werden
+    signal.signal(signal.SIGTERM, handle_sigterm)
+    
     if WEBSERVER_ON:
-        web = PV_Web(fetch_data_callback=read_modbus_data_callback)
+        # Webserver bekommt den Cache-Callback – kein direkter Modbus-Zugriff
+        web = PV_Web(fetch_data_callback=get_cached_data)
         web.start()
     
     # Datenbank-Thread starten (Daemon, damit er beim Beenden des Programms mit stirbt)
     db_thread = threading.Thread(target=db_persist_loop, daemon=True)
     db_thread.start()
-    
-    # Signal-Handler für SIGTERM (wird von 'sudo reboot' oder systemd stop gesendet) registrieren
-    signal.signal(signal.SIGTERM, handle_sigterm)
     
     print(f"Programm läuft. Daten werden alle {POLL_INTERVAL}s abgerufen. Drücke STRG+C zum Beenden.")
     
@@ -192,7 +205,8 @@ def main():
             # Regelmäßiges Abfragen der Daten (ersetzt den UI-Loop)
             # Der Aufruf füllt den Puffer der Datenbankklasse
             read_modbus_data_callback()
-            time.sleep(POLL_INTERVAL)
+            stop_event.wait(timeout=POLL_INTERVAL)  # unterbrechbarer Sleep
+            stop_event.clear()
             
     except KeyboardInterrupt:
         print("\nManueller Abbruch (STRG+C)...")

@@ -21,6 +21,14 @@
         .data-value { font-weight: bold; }
         .flow-box { border: 2px solid #eee; padding: 20px; text-align: center; border-radius: 8px; font-size: 20px; font-weight: bold; background: #fafafa; margin-top: 30px; transition: color 0.3s; }
         .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #999; }
+        /* Batterie SOC Balken */
+        .soc-bar-wrapper { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+        .soc-segments { display: flex; gap: 4px; }
+        .soc-seg { width: 22px; height: 28px; border-radius: 4px; background: #e0e0e0; transition: background 0.4s; }
+        .soc-seg.filled { background: #2ecc71; }
+        .soc-seg.filled.warn { background: #e67e22; }
+        .soc-seg.filled.crit { background: #e74c3c; }
+        .soc-label { font-weight: bold; font-size: 13px; color: #444; }
     </style>
 </head>
 <body>
@@ -38,7 +46,15 @@
 
         <h3>Betriebsdaten</h3>
         <div class="data-grid">
-            <div class="data-row"><span class="data-label">Batterie SOC:</span> <span class="data-value">{battery_soc}</span></div>
+            <div class="data-row">
+                <span class="data-label">Batterie SOC:</span>
+                <span class="data-value">
+                    <span class="soc-bar-wrapper">
+                        <span class="soc-segments" id="soc-segs"></span>
+                        <span class="soc-label" id="soc-text">{battery_soc}</span>
+                    </span>
+                </span>
+            </div>
             <div class="data-row"><span class="data-label">Batterie Leistung:</span> <span class="data-value">{battery_power}</span></div>
             <div class="data-row"><span class="data-label">Interne Temperatur:</span> <span class="data-value">{internal_temperature}</span></div>
             <div class="data-row"><span class="data-label">Netzleistung (Active):</span> <span class="data-value">{meter_active_power}</span></div>
@@ -48,7 +64,62 @@
         </div>
 
         <div class="flow-box" style="color: {flow_color}">{flow_text}</div>
+
+        <h3>DC-Leistungsverlauf heute</h3>
+        <canvas id="powerChart" height="80"></canvas>
+
         <div class="footer">Letztes Update: {timestamp}</div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <script>
+        fetch('/api/history')
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data.error || !data.labels || !data.labels.length) return;
+            new Chart(document.getElementById('powerChart'), {
+              type: 'line',
+              data: {
+                labels: data.labels,
+                datasets: [{
+                  label: 'DC-Leistung (W)',
+                  data: data.values,
+                  borderColor: '#2ecc71',
+                  backgroundColor: 'rgba(46,204,113,0.12)',
+                  fill: true,
+                  tension: 0.3,
+                  pointRadius: 0,
+                  borderWidth: 2
+                }]
+              },
+              options: {
+                animation: false,
+                scales: {
+                  x: { ticks: { maxTicksLimit: 10, font: { size: 11 } } },
+                  y: { beginAtZero: true, title: { display: true, text: 'Watt' } }
+                },
+                plugins: { legend: { display: false } }
+              }
+            });
+          });
+    </script>
+    <script>
+        (function() {
+            var raw = document.getElementById('soc-text').textContent;
+            var num = parseFloat(raw);
+            if (isNaN(num)) return;
+            var filled = Math.round(num / 10); // 0..10 Segmente
+            var segs = document.getElementById('soc-segs');
+            for (var i = 1; i <= 10; i++) {
+                var seg = document.createElement('span');
+                seg.className = 'soc-seg';
+                if (i <= filled) {
+                    seg.classList.add('filled');
+                    if (filled <= 1) seg.classList.add('crit');
+                    else if (filled <= 2) seg.classList.add('warn');
+                }
+                segs.appendChild(seg);
+            }
+        })();
+    </script>
 </body>
 </html>

@@ -1,9 +1,11 @@
 import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 import os
 import time
 import json
 import socket
+import sqlite3
+import datetime
 
 class PV_Web:
     def __init__(self, fetch_data_callback, port=8080):
@@ -14,8 +16,8 @@ class PV_Web:
     def start(self):
         handler_class = self._create_handler()
         # Erlaubt den sofortigen Neustart des Ports
-        HTTPServer.allow_reuse_address = True
-        server = HTTPServer(('0.0.0.0', self.port), handler_class)
+        ThreadingHTTPServer.allow_reuse_address = True
+        server = ThreadingHTTPServer(('0.0.0.0', self.port), handler_class)
         
         # Eigene IP-Adresse im Netzwerk ermitteln (für die Anzeige)
         host_ip = "localhost"
@@ -43,9 +45,43 @@ class PV_Web:
                     self.send_response(200)
                     self.send_header('Content-type', 'application/json; charset=utf-8')
                     self.end_headers()
-                    
+
                     data = pv_web_instance.fetch_data_callback()
                     self.wfile.write(json.dumps(data).encode('utf-8'))
+
+                elif self.path == '/api/history':
+                    self.send_response(200)
+                    self.send_header('Content-type', 'application/json; charset=utf-8')
+                    self.end_headers()
+
+                    db_path = os.path.join(os.path.dirname(__file__), 'pv_data.db')
+                    result = {"labels": [], "values": []}
+                    try:
+                        today = datetime.date.today()
+                        start = int(datetime.datetime(today.year, today.month, today.day, 5, 0).timestamp())
+                        end   = int(datetime.datetime(today.year, today.month, today.day, 22, 0).timestamp())
+                        interval = 120  # Sekunden zwischen zwei Punkten
+                        conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+                        rows = conn.execute(
+                            "SELECT timestamp, total_dc_power FROM readings "
+                            "WHERE timestamp BETWEEN ? AND ? ORDER BY timestamp",
+                            (start, end)
+                        ).fetchall()
+                        conn.close()
+                        last_ts = None
+                        for ts, val in rows:
+                            if last_ts is None or (ts - last_ts) >= interval:
+                                result["labels"].append(
+                                    datetime.datetime.fromtimestamp(ts).strftime("%H:%M")
+                                )
+                                result["values"].append(
+                                    round(val, 1) if val is not None else None
+                                )
+                                last_ts = ts
+                    except Exception as e:
+                        result["error"] = str(e)
+
+                    self.wfile.write(json.dumps(result).encode('utf-8'))
 
                 elif self.path == '/':
                     self.send_response(200)

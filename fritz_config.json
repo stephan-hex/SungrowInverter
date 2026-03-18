@@ -1,0 +1,8 @@
+{
+    "fritz_ip": "192.xxx.xxx.xxx",
+    "fritz_user": "xxxxx",
+    "fritz_password": "xxxxx",
+    "fritz_ain": "12345 1234567",
+    "temp_on_threshold": 45.0,
+    "temp_off_threshold": 40.0
+}

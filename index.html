@@ -10,51 +10,60 @@
         .container { max-width: 800px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         .header { display: flex; justify-content: space-between; margin-bottom: 30px; flex-wrap: wrap; gap: 20px; }
         .header-box { text-align: center; flex: 1; min-width: 200px; }
-        .big-value { font-size: 36px; font-weight: bold; margin-top: 5px; }
+        .big-value { font-size: 64px; font-weight: bold; margin-top: 5px; }
         .green { color: #2ecc71; }
         .blue { color: #3498db; }
-        .section-title { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: #666; }
-        h3 { border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 30px; color: #444; }
+        .section-title { font-size: 18px; text-transform: uppercase; letter-spacing: 1px; color: #666; }
+        h3 { border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 30px; color: #444; font-size: 18px; }
         .data-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .data-row { display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding: 8px 0; }
         .data-label { color: #555; }
         .data-value { font-weight: bold; }
-        .flow-box { border: 2px solid #eee; padding: 20px; text-align: center; border-radius: 8px; font-size: 20px; font-weight: bold; background: #fafafa; margin-top: 30px; transition: color 0.3s; }
+        .flow-box { border: 2px solid #eee; padding: 20px; text-align: center; border-radius: 8px; font-size: 40px; font-weight: bold; background: #fafafa; margin-top: 30px; transition: color 0.3s; }
         .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #999; }
-        /* Batterie SOC Balken */
+        /* Energie-Fluss Visualisierung */
+        .flow-container { display: flex; align-items: center; justify-content: center; margin-top: 30px; padding: 20px 10px; background: #fafafa; border: 2px solid #eee; border-radius: 8px; gap: 0; }
+        .flow-node { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 90px; }
+        .flow-icon { font-size: 40px; line-height: 1; }
+        .flow-node-label { font-size: 13px; color: #555; font-weight: bold; text-align: center; }
+        .flow-power { font-size: 12px; color: #888; }
+        .flow-track { flex: 1; height: 8px; background: #e0e0e0; border-radius: 4px; position: relative; overflow: hidden; min-width: 60px; }
+        .flow-dot { position: absolute; width: 18px; height: 8px; border-radius: 4px; top: 0; opacity: 0; }
+        @keyframes flow-right { 0%{left:-10%;opacity:0} 15%{opacity:1} 85%{opacity:1} 100%{left:110%;opacity:0} }
+        @keyframes pulse-icon { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.18);opacity:0.7} }
         .soc-bar-wrapper { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
         .soc-segments { display: flex; gap: 4px; }
-        .soc-seg { width: 22px; height: 28px; border-radius: 4px; background: #e0e0e0; transition: background 0.4s; }
+        .soc-seg { flex: 1; height: 28px; border-radius: 4px; background: #e0e0e0; transition: background 0.4s; }
         .soc-seg.filled { background: #2ecc71; }
         .soc-seg.filled.warn { background: #e67e22; }
         .soc-seg.filled.crit { background: #e74c3c; }
-        .soc-label { font-weight: bold; font-size: 13px; color: #444; }
+        .soc-seg.discharging { animation: soc-blink 1s ease-in-out infinite; }
+        @keyframes soc-blink { 0%,100%{opacity:1} 50%{opacity:0.25} }
+        .soc-label { font-weight: bold; font-size: 18px; color: #444; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <div class="header-box">
-                <div class="section-title">Aktuelle Leistung (DC)</div>
+                <div class="section-title">Aktuelle PV Leistung</div>
                 <div class="big-value green">{total_dc_power}</div>
             </div>
             <div class="header-box">
                 <div class="section-title">Tagesertrag</div>
                 <div class="big-value blue">{daily_pv_generation}</div>
             </div>
+            <div style="flex-basis: 100%; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                <div class="section-title">Batterie SOC</div>
+                <span class="soc-bar-wrapper" style="width: 100%;">
+                    <span class="soc-segments" id="soc-segs" style="width: 100%;"></span>
+                    <span class="soc-label" id="soc-text" style="align-self: center;">{battery_soc}</span>
+                </span>
+            </div>
         </div>
 
         <h3>Betriebsdaten</h3>
         <div class="data-grid">
-            <div class="data-row">
-                <span class="data-label">Batterie SOC:</span>
-                <span class="data-value">
-                    <span class="soc-bar-wrapper">
-                        <span class="soc-segments" id="soc-segs"></span>
-                        <span class="soc-label" id="soc-text">{battery_soc}</span>
-                    </span>
-                </span>
-            </div>
             <div class="data-row"><span class="data-label">Batterie Leistung:</span> <span class="data-value">{battery_power}</span></div>
             <div class="data-row"><span class="data-label">Interne Temperatur:</span> <span class="data-value">{internal_temperature}</span></div>
             <div class="data-row"><span class="data-label">Netzleistung (Active):</span> <span class="data-value">{meter_active_power}</span></div>
@@ -63,7 +72,31 @@
             <div class="data-row"><span class="data-label">Gesamtertrag:</span> <span class="data-value">{total_pv_generation}</span></div>
         </div>
 
-        <div class="flow-box" style="color: {flow_color}">{flow_text}</div>
+        <div class="flow-container" id="flow-vis">
+            <div class="flow-node">
+                <div class="flow-icon">☀️</div>
+                <div class="flow-node-label">Solar</div>
+            </div>
+            <div class="flow-track" id="track-left">
+                <span class="flow-dot" style="animation-delay:0s"></span>
+                <span class="flow-dot" style="animation-delay:0.4s"></span>
+                <span class="flow-dot" style="animation-delay:0.8s"></span>
+            </div>
+            <div class="flow-node">
+                <div class="flow-icon" id="batt-flow-icon">🔋</div>
+                <div class="flow-node-label">Batterie</div>
+                <div class="flow-power">{battery_power}</div>
+            </div>
+            <div class="flow-track" id="track-right">
+                <span class="flow-dot" style="animation-delay:0s"></span>
+                <span class="flow-dot" style="animation-delay:0.4s"></span>
+                <span class="flow-dot" style="animation-delay:0.8s"></span>
+            </div>
+            <div class="flow-node">
+                <div class="flow-icon">🏠</div>
+                <div class="flow-node-label">Haus</div>
+            </div>
+        </div>
 
         <h3>DC-Leistungsverlauf heute</h3>
         <canvas id="powerChart" height="80"></canvas>
@@ -104,10 +137,36 @@
     </script>
     <script>
         (function() {
+            var state = '{flow_state}';
+            var trackLeft  = document.getElementById('track-left');
+            var trackRight = document.getElementById('track-right');
+            var battIcon   = document.getElementById('batt-flow-icon');
+
+            function activateTrack(track, color) {
+                track.style.background = color + '33';
+                var dots = track.querySelectorAll('.flow-dot');
+                dots.forEach(function(d) {
+                    d.style.background = color;
+                    d.style.animation = 'flow-right 1.2s linear infinite';
+                });
+            }
+
+            if (state === 'charging') {
+                activateTrack(trackLeft, '#2ecc71');
+            } else if (state === 'discharging') {
+                activateTrack(trackRight, '#e67e22');
+            } else {
+                battIcon.style.animation = 'pulse-icon 2s ease-in-out infinite';
+            }
+        })();
+    </script>
+    <script>
+        (function() {
             var raw = document.getElementById('soc-text').textContent;
             var num = parseFloat(raw);
             if (isNaN(num)) return;
             var filled = Math.round(num / 10); // 0..10 Segmente
+            var discharging = '{flow_state}' === 'discharging';
             var segs = document.getElementById('soc-segs');
             for (var i = 1; i <= 10; i++) {
                 var seg = document.createElement('span');
@@ -116,6 +175,7 @@
                     seg.classList.add('filled');
                     if (filled <= 1) seg.classList.add('crit');
                     else if (filled <= 2) seg.classList.add('warn');
+                    if (discharging && i === filled) seg.classList.add('discharging');
                 }
                 segs.appendChild(seg);
             }

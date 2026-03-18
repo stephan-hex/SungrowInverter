@@ -4,6 +4,7 @@ import sqlite3
 import datetime
 import os
 import bisect
+import signal
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 import matplotlib.dates as mdates
@@ -346,4 +347,24 @@ class PVVisualizer:
 if __name__ == "__main__":
     root = tk.Tk()
     app = PVVisualizer(root)
+
+    _poll_id = None
+
+    def on_closing():
+        if _poll_id is not None:
+            root.after_cancel(_poll_id)
+        plt.close('all')
+        root.destroy()
+
+    root.protocol("WM_DELETE_WINDOW", on_closing)
+
+    # Ctrl+C (SIGINT) sauber abfangen
+    signal.signal(signal.SIGINT, lambda *args: root.after(0, on_closing))
+
+    # Periodische Callbacks damit Python-Signalhandler feuern können
+    def _poll_signals():
+        global _poll_id
+        _poll_id = root.after(200, _poll_signals)
+    _poll_id = root.after(200, _poll_signals)
+
     root.mainloop()

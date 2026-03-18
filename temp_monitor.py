@@ -25,7 +25,7 @@ FRITZ_AIN          = _fritz_cfg["fritz_ain"]
 TEMP_ON_THRESHOLD  = float(_fritz_cfg["temp_on_threshold"])
 TEMP_OFF_THRESHOLD = float(_fritz_cfg["temp_off_threshold"])
 
-LOG_PATH = os.path.join(os.path.dirname(__file__), "error.log")
+LOG_PATH = os.path.join(os.path.dirname(__file__), "temp_monitor_error.log")
 
 # --- Interner Zustand ---
 _stop_event = threading.Event()
@@ -38,7 +38,7 @@ _fritz_sid  = None   # Aktuelle Session-ID
 # ---------------------------------------------------------------------------
 
 def _log_error(soll: str, ist: str, detail: str = ""):
-    """Schreibt einen Fehlereintrag in error.log. Begrenzt die Dateigrösse auf LOG_MAX_BYTES."""
+    """Schreibt einen Fehlereintrag in temp_monitor_error.log. Begrenzt die Dateigrösse auf LOG_MAX_BYTES."""
     ts = time.strftime("%Y-%m-%d %H:%M:%S")
     line = f"[{ts}] SOLL={soll} IST={ist}"
     if detail:
@@ -81,12 +81,23 @@ def _fritz_get_sid():
 
 
 def _fritz_get_state() -> str:
+    """Gibt '1', '0', 'inval' oder leeren String zurück."""
     global _fritz_sid
     if not _fritz_sid:
         _fritz_sid = _fritz_get_sid()
     params = urllib.parse.urlencode({"ain": FRITZ_AIN, "switchcmd": "getswitchstate", "sid": _fritz_sid})
     with urllib.request.urlopen(f"http://{FRITZ_IP}/webservices/homeautoswitch.lua?{params}", timeout=5) as r:
         return r.read().decode("utf-8").strip()
+
+
+def _fritz_is_present() -> bool:
+    """Prüft ob die DECT-Steckdose erreichbar/registriert ist (getswitchpresent)."""
+    global _fritz_sid
+    if not _fritz_sid:
+        _fritz_sid = _fritz_get_sid()
+    params = urllib.parse.urlencode({"ain": FRITZ_AIN, "switchcmd": "getswitchpresent", "sid": _fritz_sid})
+    with urllib.request.urlopen(f"http://{FRITZ_IP}/webservices/homeautoswitch.lua?{params}", timeout=5) as r:
+        return r.read().decode("utf-8").strip() == "1"
 
 
 def _fritz_switch(on: bool) -> bool:
@@ -119,9 +130,19 @@ def _watchdog():
     soll_bool = _plug_state
     soll_str  = "EIN" if soll_bool else "AUS"
     try:
+        # 1. Erreichbarkeit prüfen
+        if not _fritz_is_present():
+            _log_error(soll=soll_str, ist="nicht erreichbar", detail="getswitchpresent=0 – Steckdose fehlt oder ausser Reichweite")
+            return
+
+        # 2. Zustand prüfen
         actual_raw = _fritz_get_state()
-        ist_bool   = actual_raw == "1"
-        ist_str    = "EIN" if ist_bool else "AUS" if actual_raw == "0" else actual_raw
+        if actual_raw not in ("0", "1"):
+            _log_error(soll=soll_str, ist="unbekannt", detail=f"Ungueltige Zustandsantwort: '{actual_raw}'")
+            return
+
+        ist_bool = actual_raw == "1"
+        ist_str  = "EIN" if ist_bool else "AUS"
         if ist_bool != soll_bool:
             print(f"[Watchdog] Abweichung: SOLL={soll_str} IST={ist_str} - Korrekturversuch ...")
             success = _fritz_switch(on=soll_bool)

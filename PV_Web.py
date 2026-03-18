@@ -49,6 +49,17 @@ class PV_Web:
                     data = pv_web_instance.fetch_data_callback()
                     self.wfile.write(json.dumps(data).encode('utf-8'))
 
+                elif self.path == '/api/live':
+                    self.send_response(200)
+                    self.send_header('Content-type', 'application/json; charset=utf-8')
+                    self.send_header('Access-Control-Allow-Origin', '*')
+                    self.end_headers()
+
+                    data = pv_web_instance.fetch_data_callback()
+                    keys = ['total_dc_power', 'internal_temperature', 'battery_power', 'meter_active_power']
+                    result = {k: data.get(k) for k in keys}
+                    self.wfile.write(json.dumps(result).encode('utf-8'))
+
                 elif self.path == '/api/history':
                     self.send_response(200)
                     self.send_header('Content-type', 'application/json; charset=utf-8')
@@ -106,6 +117,7 @@ class PV_Web:
                     batt_power_str = data.get("battery_power", "0 W")
                     flow_text = "Status unbekannt"
                     flow_color = "gray"
+                    flow_state = "standby"
                     
                     try:
                         # Wert parsen (z.B. "-500 W" -> -500.0)
@@ -113,12 +125,15 @@ class PV_Web:
                         if val < -10:
                             flow_text = f"🔋 Batterie wird geladen ({batt_power_str}) ⬅️"
                             flow_color = "#2ecc71" # Grün
+                            flow_state = "charging"
                         elif val > 50:
                             flow_text = f"⚡ Batterie wird entladen ({batt_power_str}) ➡️"
                             flow_color = "#e67e22" # Orange
+                            flow_state = "discharging"
                         else:
                             flow_text = f"💤 Batterie Standby ({batt_power_str}) ⏸️"
                             flow_color = "gray"
+                            flow_state = "standby"
                     except (ValueError, IndexError):
                         pass
 
@@ -126,6 +141,7 @@ class PV_Web:
                     replacements = data.copy()
                     replacements['flow_text'] = flow_text
                     replacements['flow_color'] = flow_color
+                    replacements['flow_state'] = flow_state
                     replacements['timestamp'] = time.strftime("%H:%M:%S")
                     
                     # Platzhalter im HTML ersetzen

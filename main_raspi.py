@@ -7,6 +7,7 @@ from PV_Logger import PV_Logger
 import time
 import threading
 import signal
+import datetime
 
 # Metadaten
 APP_NAME = "Sungrow Inverter Monitor (Headless)"
@@ -182,6 +183,27 @@ def handle_sigterm(signum, frame):
     running = False
     stop_event.set()  # Poll-Loop sofort aufwecken
 
+def handle_web_action(command):
+    """Callback für Buttons auf der Webseite"""
+    print(f"Web-Action empfangen: {command}")
+    
+    if command == "fast":
+        print("-> Modus: SCHNELLES Laden/Entladen aktiviert")
+    elif command == "eco":
+        print("-> Modus: ECO aktiviert")
+    elif command == "stop":
+        print("-> Modus: STOP")
+
+def get_history_data(date_str=None, cols=None):
+    """Callback für Chart-Daten"""
+    target_date = None
+    if date_str:
+        try:
+            target_date = datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
+        except ValueError:
+            pass
+    return pv_db.get_today_values(cols, target_date)
+
 def main():
     print(f"Starte {APP_NAME} Version: {VERSION}")
     print(f"Datenbank-Aufzeichnung aktiv (Intervall: {DB_UPDATE_INTERVAL}s)")
@@ -191,7 +213,8 @@ def main():
     
     if WEBSERVER_ON:
         # Webserver bekommt den Cache-Callback – kein direkter Modbus-Zugriff
-        web = PV_Web(fetch_data_callback=get_cached_data)
+        # Und jetzt auch den Action-Callback für die Buttons
+        web = PV_Web(fetch_data_callback=get_cached_data, action_callback=handle_web_action, fetch_history_callback=get_history_data)
         web.start()
     
     # Datenbank-Thread starten (Daemon, damit er beim Beenden des Programms mit stirbt)

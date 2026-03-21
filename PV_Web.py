@@ -1,23 +1,25 @@
 import threading
-from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
+from http.server import HTTPServer, BaseHTTPRequestHandler
 import os
 import time
 import json
 import socket
-import sqlite3
-import datetime
+from urllib.parse import urlparse, parse_qs
 
 class PV_Web:
-    def __init__(self, fetch_data_callback, port=8080):
+    def __init__(self, fetch_data_callback, action_callback=None, fetch_history_callback=None, port=8080):
         self.fetch_data_callback = fetch_data_callback
+        self.action_callback = action_callback
+        self.fetch_history_callback = fetch_history_callback
         self.port = port
         self.template_path = os.path.join(os.path.dirname(__file__), 'index.html')
+        self.history_template_path = os.path.join(os.path.dirname(__file__), 'history.html')
 
     def start(self):
         handler_class = self._create_handler()
         # Erlaubt den sofortigen Neustart des Ports
-        ThreadingHTTPServer.allow_reuse_address = True
-        server = ThreadingHTTPServer(('0.0.0.0', self.port), handler_class)
+        HTTPServer.allow_reuse_address = True
+        server = HTTPServer(('0.0.0.0', self.port), handler_class)
         
         # Eigene IP-Adresse im Netzwerk ermitteln (für die Anzeige)
         host_ip = "localhost"
@@ -36,63 +38,83 @@ class PV_Web:
         thread.start()
         print(f"Webserver läuft. Erreichbar unter:\n  Lokal:    http://localhost:{self.port}\n  Netzwerk: http://{host_ip}:{self.port}")
 
+    def _enrich_data(self, data):
+        """Fügt berechnete Felder (Flow-State, Zeitstempel) zu den Daten hinzu."""
+        enriched = data.copy()
+        
+        # Batterie Status für Animation berechnen
+        batt_power_str = data.get("battery_power", "0 W")
+        flow_state = "idle"
+        
+        try:
+            val = float(batt_power_str.split()[0])
+            if val < -10:
+                flow_state = "charging"
+            elif val > 10:
+                flow_state = "discharging"
+        except (ValueError, IndexError):
+            pass
+
+        enriched['flow_state'] = flow_state
+        enriched['timestamp'] = time.strftime("%H:%M:%S")
+        return enriched
+
     def _create_handler(self):
         pv_web_instance = self
         
         class PVHandler(BaseHTTPRequestHandler):
             def do_GET(self):
                 if self.path == '/api':
+                    # Daten für AJAX Abfrage
+                    raw_data = pv_web_instance.fetch_data_callback()
+                    data = pv_web_instance._enrich_data(raw_data)
+                    
                     self.send_response(200)
                     self.send_header('Content-type', 'application/json; charset=utf-8')
                     self.end_headers()
-
-                    data = pv_web_instance.fetch_data_callback()
                     self.wfile.write(json.dumps(data).encode('utf-8'))
-
-                elif self.path == '/api/live':
+                
+                elif self.path.startswith('/api/history'):
+                    # Query Parameter parsen (?date=YYYY-MM-DD&cols=a,b)
+                    query_components = parse_qs(urlparse(self.path).query)
+                    date_str = query_components.get('date', [None])[0]
+                    cols_param = query_components.get('cols', [None])[0]
+                    
+                    cols = None
+                    if cols_param:
+                        cols = cols_param.split(',')
+                    
+                    data = {}
+                    if pv_web_instance.fetch_history_callback:
+                        data = pv_web_instance.fetch_history_callback(date_str, cols)
                     self.send_response(200)
                     self.send_header('Content-type', 'application/json; charset=utf-8')
-                    self.send_header('Access-Control-Allow-Origin', '*')
                     self.end_headers()
-
-                    data = pv_web_instance.fetch_data_callback()
-                    keys = ['total_dc_power', 'internal_temperature', 'battery_power', 'meter_active_power']
-                    result = {k: data.get(k) for k in keys}
-                    self.wfile.write(json.dumps(result).encode('utf-8'))
-
-                elif self.path == '/api/history':
+                    self.wfile.write(json.dumps(data).encode('utf-8'))
+                
+                elif self.path == '/history':
                     self.send_response(200)
-                    self.send_header('Content-type', 'application/json; charset=utf-8')
+                    self.send_header('Content-type', 'text/html; charset=utf-8')
                     self.end_headers()
-
-                    db_path = os.path.join(os.path.dirname(__file__), 'pv_data.db')
-                    result = {"labels": [], "values": []}
+                    
+                    # Template laden
+                    content = ""
                     try:
-                        today = datetime.date.today()
-                        start = int(datetime.datetime(today.year, today.month, today.day, 5, 0).timestamp())
-                        end   = int(datetime.datetime(today.year, today.month, today.day, 22, 0).timestamp())
-                        interval = 120  # Sekunden zwischen zwei Punkten
-                        conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
-                        rows = conn.execute(
-                            "SELECT timestamp, total_dc_power FROM readings "
-                            "WHERE timestamp BETWEEN ? AND ? ORDER BY timestamp",
-                            (start, end)
-                        ).fetchall()
-                        conn.close()
-                        last_ts = None
-                        for ts, val in rows:
-                            if last_ts is None or (ts - last_ts) >= interval:
-                                result["labels"].append(
-                                    datetime.datetime.fromtimestamp(ts).strftime("%H:%M")
-                                )
-                                result["values"].append(
-                                    round(val, 1) if val is not None else None
-                                )
-                                last_ts = ts
+                        if os.path.exists(pv_web_instance.history_template_path):
+                            with open(pv_web_instance.history_template_path, 'r', encoding='utf-8') as f:
+                                content = f.read()
+                        else:
+                            content = "<h1>Fehler: history.html nicht gefunden</h1>"
                     except Exception as e:
-                        result["error"] = str(e)
-
-                    self.wfile.write(json.dumps(result).encode('utf-8'))
+                        content = f"<h1>Fehler beim Lesen der Datei: {e}</h1>"
+                    
+                    # Auch hier Platzhalter ersetzen (z.B. für Timestamp im Footer)
+                    raw_data = pv_web_instance.fetch_data_callback()
+                    replacements = pv_web_instance._enrich_data(raw_data)
+                    for key, val in replacements.items():
+                        content = content.replace(f"{{{key}}}", str(val))
+                        
+                    self.wfile.write(content.encode('utf-8'))
 
                 elif self.path == '/':
                     self.send_response(200)
@@ -100,7 +122,8 @@ class PV_Web:
                     self.end_headers()
                     
                     # Aktuelle Daten holen
-                    data = pv_web_instance.fetch_data_callback()
+                    raw_data = pv_web_instance.fetch_data_callback()
+                    replacements = pv_web_instance._enrich_data(raw_data)
                     
                     # Template laden
                     content = ""
@@ -113,37 +136,6 @@ class PV_Web:
                     except Exception as e:
                         content = f"<h1>Fehler beim Lesen der Datei: {e}</h1>"
 
-                    # Zusatzdaten für Flow-Visualisierung berechnen (analog zur UI)
-                    batt_power_str = data.get("battery_power", "0 W")
-                    flow_text = "Status unbekannt"
-                    flow_color = "gray"
-                    flow_state = "standby"
-                    
-                    try:
-                        # Wert parsen (z.B. "-500 W" -> -500.0)
-                        val = float(batt_power_str.split()[0])
-                        if val < -10:
-                            flow_text = f"🔋 Batterie wird geladen ({batt_power_str}) ⬅️"
-                            flow_color = "#2ecc71" # Grün
-                            flow_state = "charging"
-                        elif val > 50:
-                            flow_text = f"⚡ Batterie wird entladen ({batt_power_str}) ➡️"
-                            flow_color = "#e67e22" # Orange
-                            flow_state = "discharging"
-                        else:
-                            flow_text = f"💤 Batterie Standby ({batt_power_str}) ⏸️"
-                            flow_color = "gray"
-                            flow_state = "standby"
-                    except (ValueError, IndexError):
-                        pass
-
-                    # Daten für Template vorbereiten
-                    replacements = data.copy()
-                    replacements['flow_text'] = flow_text
-                    replacements['flow_color'] = flow_color
-                    replacements['flow_state'] = flow_state
-                    replacements['timestamp'] = time.strftime("%H:%M:%S")
-                    
                     # Platzhalter im HTML ersetzen
                     for key, val in replacements.items():
                         content = content.replace(f"{{{key}}}", str(val))
@@ -151,6 +143,31 @@ class PV_Web:
                     self.wfile.write(content.encode('utf-8'))
                 else:
                     self.send_error(404)
+            
+            def do_POST(self):
+                if self.path == '/action':
+                    content_length = int(self.headers['Content-Length'])
+                    post_data = self.rfile.read(content_length)
+                    
+                    response_msg = "Keine Aktion definiert"
+                    
+                    try:
+                        data = json.loads(post_data.decode('utf-8'))
+                        command = data.get('command')
+                        
+                        if pv_web_instance.action_callback:
+                            pv_web_instance.action_callback(command)
+                            response_msg = f"Aktion '{command}' ausgeführt"
+                        else:
+                            response_msg = "Kein Callback konfiguriert"
+                            
+                    except Exception as e:
+                        response_msg = f"Fehler: {e}"
+
+                    self.send_response(200)
+                    self.send_header('Content-type', 'text/plain')
+                    self.end_headers()
+                    self.wfile.write(response_msg.encode('utf-8'))
             
             def log_message(self, format, *args):
                 pass # Kein Logging in der Konsole, um Output sauber zu halten

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leistungsverlauf - Sungrow</title>
+    <style>
+        body { font-family: Helvetica, Arial, sans-serif; padding: 20px; background: #f0f2f5; color: #333; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h2 { border-bottom: 2px solid #eee; padding-bottom: 10px; color: #444; margin-top: 0; }
+        .nav-btn { background: #ecf0f1; border: 1px solid #bdc3c7; color: #2c3e50; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold;}
+        .nav-btn:hover { background: #bdc3c7; }
+        .back-btn { display: block; width: 100%; padding: 15px; background: #95a5a6; color: white; border: none; border-radius: 6px; font-size: 16px; margin-top: 30px; cursor: pointer; }
+        .back-btn:hover { background: #7f8c8d; }
+        .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #999; }
+        .controls { margin-bottom: 15px; background: #fafafa; padding: 10px; border-radius: 8px; border: 1px solid #eee; display: flex; flex-wrap: wrap; gap: 15px; }
+        .checkbox-label { display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 14px; user-select: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px;">
+            <h2 style="border: none; margin: 0; padding: 0;">DC-Leistungsverlauf</h2>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <button class="nav-btn" onclick="changeDate(-1)">&#9664;</button>
+                <span id="chart-date-display" style="font-size: 14px; font-weight: bold; min-width: 100px; text-align: center; color: #555;">Heute</span>
+                <button class="nav-btn" onclick="changeDate(1)">&#9654;</button>
+            </div>
+        </div>
+
+        <div class="controls">
+            <label class="checkbox-label"><input type="checkbox" class="dataset-cb" value="total_dc_power" checked> DC PV-Leistung</label>
+            <label class="checkbox-label"><input type="checkbox" class="dataset-cb" value="battery_soc"> Batterie SOC (%)</label>
+            <label class="checkbox-label"><input type="checkbox" class="dataset-cb" value="export_power"> Export Power</label>
+            <label class="checkbox-label"><input type="checkbox" class="dataset-cb" value="meter_active_power"> Netzleistung (Active)</label>
+        </div>
+
+        <div style="position: relative; height: 600px; width: 100%;">
+            <canvas id="powerChart"></canvas>
+        </div>
+
+        <button class="back-btn" onclick="window.location.href='/'">Zurück zur Übersicht</button>
+        
+        <div class="footer">Letztes Update System: {timestamp}</div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <script>
+        let chartInstance = null;
+        let currentDate = new Date();
+
+        function updateDateDisplay() {
+            const options = { year: 'numeric', month: '2-digit', day: '2-digit' };
+            const today = new Date();
+            if (currentDate.toDateString() === today.toDateString()) {
+                document.getElementById('chart-date-display').innerText = "Heute";
+            } else {
+                document.getElementById('chart-date-display').innerText = currentDate.toLocaleDateString('de-DE', options);
+            }
+        }
+
+        function changeDate(days) {
+            currentDate.setDate(currentDate.getDate() + days);
+            updateDateDisplay();
+            loadChart();
+        }
+
+        // Event Listener für Checkboxen
+        document.querySelectorAll('.dataset-cb').forEach(cb => {
+            cb.addEventListener('change', loadChart);
+        });
+
+        function loadChart() {
+            const year = currentDate.getFullYear();
+            const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+            const day = String(currentDate.getDate()).padStart(2, '0');
+            
+            // Aktive Checkboxen sammeln
+            const selectedCols = Array.from(document.querySelectorAll('.dataset-cb:checked')).map(cb => cb.value);
+            if (selectedCols.length === 0) selectedCols.push("total_dc_power"); // Fallback
+
+            const dateStr = `${year}-${month}-${day}`;
+            const colsStr = selectedCols.join(',');
+
+            fetch(`/api/history?date=${dateStr}&cols=${colsStr}`)
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (chartInstance) {
+                    chartInstance.destroy();
+                }
+                
+                // Datasets dynamisch bauen
+                const datasets = [];
+                
+                // Konfiguration für die verschiedenen Datentypen
+                const configs = {
+                    'total_dc_power': { label: 'PV Leistung (W)', color: '#2ecc71', fill: true, yAxisID: 'y' },
+                    'battery_soc': { label: 'SOC (%)', color: '#9b59b6', fill: false, yAxisID: 'y1' },
+                    'export_power': { label: 'Export (W)', color: '#f1c40f', fill: false, yAxisID: 'y' },
+                    'meter_active_power': { label: 'Netz (W)', color: '#e74c3c', fill: false, yAxisID: 'y' }
+                };
+
+                // Über die Antwort iterieren (Keys sind die Spaltennamen)
+                if (data.datasets) {
+                    for (const [key, values] of Object.entries(data.datasets)) {
+                        const cfg = configs[key] || { label: key, color: '#333', fill: false, yAxisID: 'y' };
+                        datasets.push({
+                            label: cfg.label,
+                            data: values,
+                            borderColor: cfg.color,
+                            backgroundColor: cfg.color + '20', // Transparenter Hintergrund
+                            fill: cfg.fill,
+                            tension: 0.3,
+                            pointRadius: 0,
+                            borderWidth: 2,
+                            yAxisID: cfg.yAxisID
+                        });
+                    }
+                }
+
+                chartInstance = new Chart(document.getElementById('powerChart'), {
+                type: 'line',
+                data: {
+                    labels: data.labels || [], 
+                    datasets: datasets
+                },
+                options: {
+                    animation: false,
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    scales: {
+                        x: { 
+                            ticks: { maxTicksLimit: 12, font: { size: 11 } } 
+                        },
+                        y: { 
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            beginAtZero: true, 
+                            title: { display: true, text: 'Watt' } 
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: datasets.some(d => d.yAxisID === 'y1'), // Nur anzeigen wenn SOC gewählt
+                            position: 'right',
+                            min: 0,
+                            max: 100,
+                            grid: { drawOnChartArea: false }, // Gitterlinien nur von linker Achse
+                            title: { display: true, text: 'SOC (%)' }
+                        }
+                    },
+                    plugins: { legend: { display: true } }
+                }
+                });
+            });
+        }
+
+        // Initial laden
+        updateDateDisplay();
+        loadChart();
+    </script>
+</body>
+</html>

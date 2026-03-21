@@ -1,6 +1,7 @@
 import sqlite3
 import time
 import os
+import datetime
 
 class PV_Database:
     def __init__(self, db_name="pv_data.db", registers_dict=None):
@@ -109,6 +110,54 @@ class PV_Database:
                 self.conn.execute(query, vals)
         except sqlite3.Error as e:
             print(f"Datenbank Fehler beim Schreiben: {e}")
+
+    def get_today_values(self, col_names=None, date_obj=None):
+        """Gibt die historischen Werte eines bestimmten Tages für das Chart zurück"""
+        # Default auf total_dc_power, falls nichts übergeben wird
+        if not col_names:
+            col_names = ["total_dc_power"]
+
+        # Vorbereitete Datenstruktur
+        data = {'labels': [], 'datasets': {}}
+        # Sicherstellen, dass für jede angefragte Spalte ein (leerer) Eintrag existiert
+        for col in col_names:
+            if isinstance(col, str):
+                data['datasets'][col] = []
+
+        try:
+            if date_obj is None:
+                date_obj = datetime.date.today()
+
+            # Start und Ende des Tages als Timestamp
+            start_dt = datetime.datetime.combine(date_obj, datetime.time.min)
+            end_dt = datetime.datetime.combine(date_obj, datetime.time.max)
+
+            start_ts = start_dt.timestamp()
+            end_ts = end_dt.timestamp()
+
+            cursor = self.conn.cursor()
+
+            # Nur valide Spaltennamen für die SQL-Abfrage verwenden
+            valid_cols = [c for c in col_names if isinstance(c, str) and (c in self.registers or c == "total_dc_power")]
+            if not valid_cols:
+                return data # Leere Datenstruktur zurückgeben, wenn keine validen Spalten da sind
+
+            cols_str = ", ".join(valid_cols)
+            query = f"SELECT timestamp, {cols_str} FROM readings WHERE timestamp >= ? AND timestamp <= ? ORDER BY timestamp ASC"
+            cursor.execute(query, (start_ts, end_ts))
+            rows = cursor.fetchall()
+
+            for row in rows:
+                dt = datetime.datetime.fromtimestamp(row[0])
+                data['labels'].append(dt.strftime("%H:%M"))
+                # Werte den entsprechenden Datasets zuordnen
+                for i, col in enumerate(valid_cols):
+                    val = row[i + 1]
+                    data['datasets'][col].append(val)
+        except Exception as e:
+            print(f"DB Read Error: {e}")
+        
+        return data
 
     def close(self):
         self.conn.close()

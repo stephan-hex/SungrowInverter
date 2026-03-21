@@ -2,7 +2,6 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="refresh" content="10">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sungrow Inverter Monitor</title>
     <style>
@@ -10,12 +9,11 @@
         .container { max-width: 800px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         .header { display: flex; justify-content: space-between; margin-bottom: 30px; flex-wrap: wrap; gap: 20px; }
         .header-box { text-align: center; flex: 1; min-width: 200px; }
-        .big-value { font-size: 64px; font-weight: bold; margin-top: 5px; }
-        .green { color: #2ecc71; }
-        .blue { color: #3498db; }
+        .big-value { font-size: 48px; font-weight: bold; margin-top: 5px; }
+        .green { color: #2ecc71; } .blue { color: #3498db; }
         .section-title { font-size: 18px; text-transform: uppercase; letter-spacing: 1px; color: #666; }
-        h3 { border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 30px; color: #444; font-size: 18px; }
-        .data-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        h3 { border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 30px; color: #444; font-size: 18px; margin-bottom: 20px;}
+        .data-grid { display: grid; grid-template-columns: 1fr; gap: 0; margin-bottom: 20px; } /* Simplified for better mobile view */
         .data-row { display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding: 8px 0; }
         .data-label { color: #555; }
         .data-value { font-weight: bold; }
@@ -40,6 +38,12 @@
         .soc-seg.discharging { animation: soc-blink 1s ease-in-out infinite; }
         @keyframes soc-blink { 0%,100%{opacity:1} 50%{opacity:0.25} }
         .soc-label { font-weight: bold; font-size: 18px; color: #444; }
+        /* Button Styling */
+        .btn { background-color: #5dade2; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 1em; flex: 1; max-width: 150px; transition: background-color 0.2s, transform 0.1s; }
+        .btn:hover { background-color: #3498db; }
+        .btn:active { transform: translateY(1px); }
+        .nav-btn { background: #ecf0f1; border: 1px solid #bdc3c7; color: #2c3e50; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold;}
+        .nav-btn:hover { background: #bdc3c7; }
     </style>
 </head>
 <body>
@@ -47,29 +51,32 @@
         <div class="header">
             <div class="header-box">
                 <div class="section-title">Aktuelle PV Leistung</div>
-                <div class="big-value green">{total_dc_power}</div>
+                <div class="big-value green" id="val_total_dc_power">{total_dc_power}</div>
             </div>
             <div class="header-box">
                 <div class="section-title">Tagesertrag</div>
-                <div class="big-value blue">{daily_pv_generation}</div>
+                <div class="big-value blue" id="val_daily_pv_generation">{daily_pv_generation}</div>
             </div>
             <div style="flex-basis: 100%; display: flex; flex-direction: column; align-items: center; gap: 4px;">
                 <div class="section-title">Batterie SOC</div>
                 <span class="soc-bar-wrapper" style="width: 100%;">
                     <span class="soc-segments" id="soc-segs" style="width: 100%;"></span>
-                    <span class="soc-label" id="soc-text" style="align-self: center;">{battery_soc}</span>
+                    <span class="soc-label" id="val_battery_soc" style="align-self: center;">{battery_soc}</span>
                 </span>
             </div>
         </div>
 
-        <h3>Betriebsdaten</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 30px; margin-bottom: 20px;">
+            <h3 style="border: none; margin: 0; padding: 0;">Betriebsdaten</h3>
+            <button class="nav-btn" onclick="window.location.href='/history'" style="background: #3498db; color: white; border: none;">Verlauf &raquo;</button>
+        </div>
         <div class="data-grid">
-            <div class="data-row"><span class="data-label">Batterie Leistung:</span> <span class="data-value">{battery_power}</span></div>
-            <div class="data-row"><span class="data-label">Interne Temperatur:</span> <span class="data-value">{internal_temperature}</span></div>
-            <div class="data-row"><span class="data-label">Netzleistung (Active):</span> <span class="data-value">{meter_active_power}</span></div>
-            <div class="data-row"><span class="data-label">Import heute:</span> <span class="data-value">{daily_import_energy}</span></div>
-            <div class="data-row"><span class="data-label">Export heute:</span> <span class="data-value">{daily_export_energy}</span></div>
-            <div class="data-row"><span class="data-label">Gesamtertrag:</span> <span class="data-value">{total_pv_generation}</span></div>
+            <div class="data-row"><span class="data-label">Batterie Leistung:</span> <span class="data-value" id="val_battery_power">{battery_power}</span></div>
+            <div class="data-row"><span class="data-label">Interne Temperatur:</span> <span class="data-value" id="val_internal_temperature">{internal_temperature}</span></div>
+            <div class="data-row"><span class="data-label">Netzleistung (Active):</span> <span class="data-value" id="val_meter_active_power">{meter_active_power}</span></div>
+            <div class="data-row"><span class="data-label">Import heute:</span> <span class="data-value" id="val_daily_import_energy">{daily_import_energy}</span></div>
+            <div class="data-row"><span class="data-label">Export heute:</span> <span class="data-value" id="val_daily_export_energy">{daily_export_energy}</span></div>
+            <div class="data-row"><span class="data-label">Gesamtertrag:</span> <span class="data-value" id="val_total_pv_generation">{total_pv_generation}</span></div>
         </div>
 
         <div class="flow-container" id="flow-vis">
@@ -85,7 +92,7 @@
             <div class="flow-node">
                 <div class="flow-icon" id="batt-flow-icon">🔋</div>
                 <div class="flow-node-label">Batterie</div>
-                <div class="flow-power">{battery_power}</div>
+                <div class="flow-power" id="val_flow_battery_power">{battery_power}</div>
             </div>
             <div class="flow-track" id="track-right">
                 <span class="flow-dot" style="animation-delay:0s"></span>
@@ -98,49 +105,34 @@
             </div>
         </div>
 
-        <h3>DC-Leistungsverlauf heute</h3>
-        <canvas id="powerChart" height="80"></canvas>
 
-        <div class="footer">Letztes Update: {timestamp}</div>
+        <!-- Charge-Control Buttons -->
+        <div class="header-box" style="margin-top: 20px; width: 100%;">
+            <div class="section-title">Charge-Control</div>
+            <div style="display: flex; justify-content: center; gap: 15px; margin-top: 15px; flex-wrap: wrap;">
+                <button class="btn" onclick="triggerAction('fast')">Fast</button>
+                <button class="btn" onclick="triggerAction('eco')">ECO</button>
+                <button class="btn" onclick="triggerAction('stop')">Stop</button>
+            </div>
+        </div>
+
+        <div class="footer">Letztes Update: <span id="val_timestamp">{timestamp}</span></div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
     <script>
-        fetch('/api/history')
-          .then(function(r) { return r.json(); })
-          .then(function(data) {
-            if (data.error || !data.labels || !data.labels.length) return;
-            new Chart(document.getElementById('powerChart'), {
-              type: 'line',
-              data: {
-                labels: data.labels,
-                datasets: [{
-                  label: 'DC-Leistung (W)',
-                  data: data.values,
-                  borderColor: '#2ecc71',
-                  backgroundColor: 'rgba(46,204,113,0.12)',
-                  fill: true,
-                  tension: 0.3,
-                  pointRadius: 0,
-                  borderWidth: 2
-                }]
-              },
-              options: {
-                animation: false,
-                scales: {
-                  x: { ticks: { maxTicksLimit: 10, font: { size: 11 } } },
-                  y: { beginAtZero: true, title: { display: true, text: 'Watt' } }
-                },
-                plugins: { legend: { display: false } }
-              }
-            });
-          });
-    </script>
-    <script>
-        (function() {
-            var state = '{flow_state}';
+        function updateFlowAnimation(state) {
             var trackLeft  = document.getElementById('track-left');
             var trackRight = document.getElementById('track-right');
             var battIcon   = document.getElementById('batt-flow-icon');
+
+            // Reset styles
+            trackLeft.style.background = '#e0e0e0';
+            trackRight.style.background = '#e0e0e0';
+            battIcon.style.animation = 'none';
+            
+            document.querySelectorAll('.flow-dot').forEach(function(d) {
+                d.style.animation = 'none';
+                d.style.background = 'transparent';
+            });
 
             function activateTrack(track, color) {
                 track.style.background = color + '33';
@@ -158,16 +150,17 @@
             } else {
                 battIcon.style.animation = 'pulse-icon 2s ease-in-out infinite';
             }
-        })();
+        }
     </script>
     <script>
-        (function() {
-            var raw = document.getElementById('soc-text').textContent;
-            var num = parseFloat(raw);
+        function updateSOCDisplay(socText, flowState) {
+            var num = parseFloat(socText);
             if (isNaN(num)) return;
             var filled = Math.round(num / 10); // 0..10 Segmente
-            var discharging = '{flow_state}' === 'discharging';
+            var discharging = flowState === 'discharging';
             var segs = document.getElementById('soc-segs');
+            segs.innerHTML = ''; // Clear previous segments
+
             for (var i = 1; i <= 10; i++) {
                 var seg = document.createElement('span');
                 seg.className = 'soc-seg';
@@ -179,7 +172,65 @@
                 }
                 segs.appendChild(seg);
             }
-        })();
+        }
+    </script>
+    
+    <!-- Neue Haupt-Logik für AJAX und Buttons -->
+    <script>
+        // Initiale Aufrufe mit Template-Werten beim Laden der Seite
+        document.addEventListener('DOMContentLoaded', function() {
+            updateFlowAnimation('{flow_state}');
+            updateSOCDisplay(document.getElementById('val_battery_soc').textContent, '{flow_state}');
+        });
+
+        async function fetchData() {
+            try {
+                const response = await fetch('/api');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+
+                // Text-Werte aktualisieren
+                const idsToUpdate = [
+                    'total_dc_power', 'daily_pv_generation', 'battery_soc', 
+                    'battery_power', 'internal_temperature', 'meter_active_power',
+                    'daily_import_energy', 'daily_export_energy', 'total_pv_generation',
+                    'timestamp'
+                ];
+
+                idsToUpdate.forEach(id => {
+                    const el = document.getElementById('val_' + id);
+                    if (el && data[id] !== undefined) {
+                        el.textContent = data[id];
+                    }
+                });
+                // Sonderfall für Batterie-Power im Flow-Diagramm
+                const flowBattPowerEl = document.getElementById('val_flow_battery_power');
+                if (flowBattPowerEl && data.battery_power !== undefined) {
+                    flowBattPowerEl.textContent = data.battery_power;
+                }
+
+                // Visuelle Elemente aktualisieren
+                updateFlowAnimation(data.flow_state);
+                updateSOCDisplay(data.battery_soc, data.flow_state);
+
+            } catch (e) {
+                console.error("Fehler beim Abrufen der Daten:", e);
+            }
+        }
+
+        async function triggerAction(command) {
+            console.log(`Sende Aktion: ${command}`);
+            await fetch('/action', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({command: command})
+            });
+        }
+
+        // Alle 5 Sekunden aktualisieren
+        setInterval(fetchData, 5000);
     </script>
 </body>
 </html>

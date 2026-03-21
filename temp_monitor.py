@@ -1,6 +1,7 @@
 ﻿import threading
 import urllib.request
 import urllib.parse
+from urllib.error import URLError
 import json
 import hashlib
 import os
@@ -8,7 +9,7 @@ import time
 import xml.etree.ElementTree as ET
 
 # --- PV-Monitor Konfiguration ---
-API_URL             = "http://localhost:8080/api/live"
+API_URL             = "http://localhost:8080/api"
 READ_INTERVAL_S     = 60   # Lesezyklus in Sekunden
 WATCHDOG_INTERVAL_S = 600  # Zustandsüberprüfung alle 10 Minuten
 LOG_MAX_BYTES       = 100 * 1024  # 100 kByte
@@ -176,6 +177,8 @@ def _read_and_control():
             _plug_state = False
     except (ValueError, IndexError):
         print(f"FEHLER: Ungueltiger Temperaturwert: {raw!r}")
+    except URLError:
+        print(f"WARNUNG: Verbindung zu {API_URL} fehlgeschlagen. Läuft 'main_raspi.py'?")
     except Exception as e:
         print(f"FEHLER beim Abrufen der Daten: {e}")
 

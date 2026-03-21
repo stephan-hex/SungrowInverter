@@ -15,6 +15,24 @@
         .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #999; }
         .controls { margin-bottom: 15px; background: #fafafa; padding: 10px; border-radius: 8px; border: 1px solid #eee; display: flex; flex-wrap: wrap; gap: 15px; }
         .checkbox-label { display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 14px; user-select: none; }
+        /* Status Bar Styling */
+        .status-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: #34495e;
+            color: white;
+            padding: 5px 20px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            box-sizing: border-box;
+            z-index: 100;
+        }
+        .status-ok { color: #2ecc71; font-weight: bold; }
+        .status-error { color: #e74c3c; font-weight: bold; }
+        body { padding-bottom: 30px; }
     </style>
 </head>
 <body>
@@ -41,7 +59,12 @@
 
         <button class="back-btn" onclick="window.location.href='/'">Zurück zur Übersicht</button>
         
-        <div class="footer">Letztes Update System: {timestamp}</div>
+    </div>
+
+    <div class="status-bar">
+        <span>Server: <span id="server-status" class="status-ok">OK</span></span>
+        <span>Letztes Update System: <span id="val_timestamp">{timestamp}</span></span>
+        <span id="live-clock">--:--:--</span>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
@@ -70,6 +93,41 @@
             cb.addEventListener('change', loadChart);
         });
 
+        function updateClock() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('de-DE');
+            const clockEl = document.getElementById('live-clock');
+            if (clockEl) {
+                clockEl.textContent = timeString;
+            }
+        }
+        
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        async function checkServerStatus() {
+            const serverStatusEl = document.getElementById('server-status');
+            const timestampEl = document.getElementById('val_timestamp');
+            try {
+                const response = await fetch('/api');
+                if (!response.ok) throw new Error('Server not OK');
+                const data = await response.json();
+
+                if (serverStatusEl) {
+                    serverStatusEl.textContent = 'OK';
+                    serverStatusEl.className = 'status-ok';
+                }
+                if (timestampEl && data.timestamp) {
+                    timestampEl.textContent = data.timestamp;
+                }
+            } catch (e) {
+                if (serverStatusEl) {
+                    serverStatusEl.textContent = 'Fehler';
+                    serverStatusEl.className = 'status-error';
+                }
+            }
+        }
+
         function loadChart() {
             const year = currentDate.getFullYear();
             const month = String(currentDate.getMonth() + 1).padStart(2, '0');
@@ -82,8 +140,16 @@
             const dateStr = `${year}-${month}-${day}`;
             const colsStr = selectedCols.join(',');
 
+            const serverStatusEl = document.getElementById('server-status');
+
             fetch(`/api/history?date=${dateStr}&cols=${colsStr}`)
-            .then(function(r) { return r.json(); })
+            .then(function(r) { 
+                if (r.ok && serverStatusEl) {
+                    serverStatusEl.textContent = "OK";
+                    serverStatusEl.className = "status-ok";
+                }
+                return r.json(); 
+            })
             .then(function(data) {
                 if (chartInstance) {
                     chartInstance.destroy();
@@ -156,12 +222,19 @@
                     plugins: { legend: { display: true } }
                 }
                 });
+            })
+            .catch(function(e) {
+                if (serverStatusEl) { serverStatusEl.textContent = "Fehler"; serverStatusEl.className = "status-error"; }
+                console.error(e);
             });
         }
 
         // Initial laden
         updateDateDisplay();
         loadChart();
+
+        // Periodischer Server-Check
+        setInterval(checkServerStatus, 5000);
     </script>
 </body>
 </html>

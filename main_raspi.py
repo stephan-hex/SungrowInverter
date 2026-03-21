@@ -23,6 +23,9 @@ DB_UPDATE_INTERVAL = 60 # Sekunden (Schreiben in die DB)
 POLL_INTERVAL = 5 # Sekunden (Abfrageintervall, ersetzt den UI-Refresh)
 LOGGING_ENABLED = True
 
+CONFIG_FILE = os.path.join(os.path.dirname(__file__), 'main_config.json')
+CHARGE_MODE = "NORMAL-CHARGING" # Default: Normal (Links), Intelligent (Rechts)
+
 # Register global laden
 REGISTERS = {}
 try:
@@ -42,6 +45,29 @@ else:
 
 # Datenbank initialisieren
 pv_db = PV_Database(registers_dict=REGISTERS)
+
+def load_config():
+    """Lädt die Konfiguration (Lade-Modus) beim Start"""
+    global CHARGE_MODE
+    try:
+        if os.path.exists(CONFIG_FILE):
+            with open(CONFIG_FILE, 'r') as f:
+                data = json.load(f)
+                val = data.get("charge_mode", "NORMAL-CHARGING")
+                # Migration alter Werte
+                if val == "Normal": val = "NORMAL-CHARGING"
+                if val == "Surplus": val = "INTELLIGENT-CHARGING"
+                CHARGE_MODE = val
+    except Exception as e:
+        print(f"Fehler beim Laden der Konfiguration: {e}")
+
+def save_config():
+    """Speichert den aktuellen Lade-Modus"""
+    try:
+        with open(CONFIG_FILE, 'w') as f:
+            json.dump({"charge_mode": CHARGE_MODE}, f)
+    except Exception as e:
+        print(f"Fehler beim Speichern der Konfiguration: {e}")
 
 def read_raw_modbus_data():
     """Liest alle Register aus und gibt ein Dictionary mit Rohwerten (Zahlen) zurück"""
@@ -159,6 +185,11 @@ def read_modbus_data_callback():
     pv_db.prepare_data(raw, current_time)
     
     last_data_cache = format_data_for_ui(raw)
+    
+    # Lade-Modus zur API hinzufügen
+    last_data_cache['charge_mode'] = CHARGE_MODE
+    # Hilfsfeld für das Template, um die Checkbox beim Laden korrekt zu setzen
+    last_data_cache['charge_mode_checked'] = "checked" if CHARGE_MODE == "INTELLIGENT-CHARGING" else ""
     return last_data_cache
 
 def get_cached_data():
@@ -186,13 +217,14 @@ def handle_sigterm(signum, frame):
 def handle_web_action(command):
     """Callback für Buttons auf der Webseite"""
     print(f"Web-Action empfangen: {command}")
+    global CHARGE_MODE
     
-    if command == "fast":
-        print("-> Modus: SCHNELLES Laden/Entladen aktiviert")
-    elif command == "eco":
-        print("-> Modus: ECO aktiviert")
-    elif command == "stop":
-        print("-> Modus: STOP")
+    if command == "mode_normal":
+        CHARGE_MODE = "NORMAL-CHARGING"
+        save_config()
+    elif command == "mode_surplus":
+        CHARGE_MODE = "INTELLIGENT-CHARGING"
+        save_config()
 
 def get_history_data(date_str=None, cols=None):
     """Callback für Chart-Daten"""
@@ -207,6 +239,9 @@ def get_history_data(date_str=None, cols=None):
 def main():
     print(f"Starte {APP_NAME} Version: {VERSION}")
     print(f"Datenbank-Aufzeichnung aktiv (Intervall: {DB_UPDATE_INTERVAL}s)")
+    
+    # Konfiguration laden
+    load_config()
     
     # Signal-Handler früh registrieren, bevor Threads gestartet werden
     signal.signal(signal.SIGTERM, handle_sigterm)

@@ -44,6 +44,31 @@
         .btn:active { transform: translateY(1px); }
         .nav-btn { background: #ecf0f1; border: 1px solid #bdc3c7; color: #2c3e50; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold;}
         .nav-btn:hover { background: #bdc3c7; }
+        /* Toggle Switch Styling */
+        .switch { position: relative; display: inline-block; width: 60px; height: 34px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #2196F3; }
+        input:checked + .slider:before { transform: translateX(26px); }
+        /* Status Bar Styling */
+        .status-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: #34495e;
+            color: white;
+            padding: 5px 20px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            box-sizing: border-box;
+            z-index: 100;
+        }
+        .status-ok { color: #2ecc71; font-weight: bold; }
+        .status-error { color: #e74c3c; font-weight: bold; }
+        body { padding-bottom: 30px; } /* Platz für die fixe Statusleiste schaffen */
     </style>
 </head>
 <body>
@@ -106,18 +131,28 @@
         </div>
 
 
-        <!-- Charge-Control Buttons -->
+        <!-- Charge-Control Toggle -->
         <div class="header-box" style="margin-top: 20px; width: 100%;">
-            <div class="section-title">Charge-Control</div>
-            <div style="display: flex; justify-content: center; gap: 15px; margin-top: 15px; flex-wrap: wrap;">
-                <button class="btn" onclick="triggerAction('fast')">Fast</button>
-                <button class="btn" onclick="triggerAction('eco')">ECO</button>
-                <button class="btn" onclick="triggerAction('stop')">Stop</button>
+            <div class="section-title">Wallbox-Lademodus</div>
+            <div style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 15px;">
+                <span style="font-weight: bold; color: #555;">Normal</span>
+                <label class="switch">
+                    <input type="checkbox" id="mode-toggle" onchange="toggleMode(this)" {charge_mode_checked}>
+                    <span class="slider"></span>
+                </label>
+                <span style="font-weight: bold; color: #555;">Intelligent</span>
             </div>
+            <div style="margin-top:5px; font-size: 0.9em; color: #777;">Aktuell: <span id="val_charge_mode">{charge_mode}</span></div>
         </div>
 
-        <div class="footer">Letztes Update: <span id="val_timestamp">{timestamp}</span></div>
     </div>
+
+    <div class="status-bar">
+        <span>Server: <span id="server-status" class="status-ok">OK</span></span>
+        <span>Letztes Update: <span id="val_timestamp">{timestamp}</span></span>
+        <span id="live-clock">--:--:--</span>
+    </div>
+
     <script>
         function updateFlowAnimation(state) {
             var trackLeft  = document.getElementById('track-left');
@@ -181,15 +216,23 @@
         document.addEventListener('DOMContentLoaded', function() {
             updateFlowAnimation('{flow_state}');
             updateSOCDisplay(document.getElementById('val_battery_soc').textContent, '{flow_state}');
+            updateClock(); // Uhr sofort initialisieren
         });
 
         async function fetchData() {
+            const serverStatusEl = document.getElementById('server-status');
             try {
                 const response = await fetch('/api');
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 const data = await response.json();
+
+                // Server Status bei Erfolg
+                if (serverStatusEl) {
+                    serverStatusEl.textContent = 'OK';
+                    serverStatusEl.className = 'status-ok';
+                }
 
                 // Text-Werte aktualisieren
                 const idsToUpdate = [
@@ -210,14 +253,32 @@
                 if (flowBattPowerEl && data.battery_power !== undefined) {
                     flowBattPowerEl.textContent = data.battery_power;
                 }
+                
+                // Toggle Switch Status aktualisieren (falls von anderem Client geändert)
+                const toggleEl = document.getElementById('mode-toggle');
+                if (toggleEl && data.charge_mode) {
+                    document.getElementById('val_charge_mode').textContent = data.charge_mode;
+                    // Checkbox setzen: Surplus = Checked, Normal = Unchecked
+                    toggleEl.checked = (data.charge_mode === 'INTELLIGENT-CHARGING');
+                }
 
                 // Visuelle Elemente aktualisieren
                 updateFlowAnimation(data.flow_state);
                 updateSOCDisplay(data.battery_soc, data.flow_state);
 
             } catch (e) {
+                // Server Status bei Fehler
+                if (serverStatusEl) {
+                    serverStatusEl.textContent = 'Fehler';
+                    serverStatusEl.className = 'status-error';
+                }
                 console.error("Fehler beim Abrufen der Daten:", e);
             }
+        }
+
+        function toggleMode(checkbox) {
+            const command = checkbox.checked ? 'mode_surplus' : 'mode_normal';
+            triggerAction(command);
         }
 
         async function triggerAction(command) {
@@ -229,8 +290,19 @@
             });
         }
 
+        function updateClock() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('de-DE');
+            const clockEl = document.getElementById('live-clock');
+            if (clockEl) {
+                clockEl.textContent = timeString;
+            }
+        }
+
         // Alle 5 Sekunden aktualisieren
         setInterval(fetchData, 5000);
+        // Uhr jede Sekunde aktualisieren
+        setInterval(updateClock, 1000);
     </script>
 </body>
 </html>

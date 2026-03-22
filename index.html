@@ -277,7 +277,16 @@
         }
 
         function toggleMode(checkbox) {
-            const command = checkbox.checked ? 'mode_surplus' : 'mode_normal';
+            const isIntelligent = checkbox.checked;
+            const command = isIntelligent ? 'mode_surplus' : 'mode_normal';
+            
+            // Optimistisches UI-Update für sofortiges Feedback
+            const modeText = isIntelligent ? 'INTELLIGENT-CHARGING' : 'NORMAL-CHARGING';
+            const modeLabel = document.getElementById('val_charge_mode');
+            if (modeLabel) {
+                modeLabel.textContent = modeText;
+            }
+
             triggerAction(command);
         }
 

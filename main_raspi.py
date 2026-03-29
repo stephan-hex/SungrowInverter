@@ -25,7 +25,7 @@ POLL_INTERVAL = 5 # Sekunden (Abfrageintervall, ersetzt den UI-Refresh)
 LOGGING_ENABLED = True
 
 # Debug-Einstellungen
-DEBUG_FRITZ = True
+DEBUG_FRITZ = False
 
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), 'main_config.json')
 CHARGE_MODE = "NORMAL-CHARGING" # Default: Normal (Links), Intelligent (Rechts)

@@ -29,8 +29,8 @@
         .hub-container {
             width: 100%;
             height: 100vh;
-            max-width: 600px;
-            max-height: 800px;
+            max-width: 800px;
+            max-height: 100%;
             background-color: var(--card-bg);
             display: flex;
             flex-direction: column;
@@ -135,8 +135,8 @@
     <script>
         function updateDate() {
             const now = new Date();
-            const dateOptions = { day: '2-digit', month: 'long', year: 'numeric' };
-            const weekdayOptions = { weekday: 'long' };
+            const dateOptions = { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Europe/Berlin' };
+            const weekdayOptions = { weekday: 'long', timeZone: 'Europe/Berlin' };
             document.getElementById('current-date').textContent = now.toLocaleDateString('de-DE', dateOptions);
             document.getElementById('current-weekday').textContent = now.toLocaleDateString('de-DE', weekdayOptions);
         }
@@ -161,12 +161,17 @@
 
         function updateClock() {
             const now = new Date();
-            const s = now.getSeconds(), m = now.getMinutes(), h = now.getHours();
+            
+            // Zeit für Berlin erzwingen (24h Format)
+            const berlinTimeStr = now.toLocaleTimeString('de-DE', {timeZone: 'Europe/Berlin', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'});
+            const parts = berlinTimeStr.split(':').map(Number);
+            const h = parts[0], m = parts[1], s = parts[2];
+
             const sDeg = s * 6, mDeg = m * 6 + s * 0.1, hDeg = (h % 12) * 30 + m * 0.5;
             document.getElementById('hour').setAttribute("transform", `rotate(${hDeg} 50 50)`);
             document.getElementById('minute').setAttribute("transform", `rotate(${mDeg} 50 50)`);
             document.getElementById('second-group').setAttribute("transform", `rotate(${sDeg} 50 50)`);
-            document.getElementById('live-clock').textContent = now.toLocaleTimeString('de-DE');
+            document.getElementById('live-clock').textContent = berlinTimeStr;
         }
 
         async function checkServerStatus() {

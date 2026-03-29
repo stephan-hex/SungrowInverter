@@ -19,7 +19,7 @@
         .container {
             width: 100%;
             height: 100vh;
-            max-width: 800px;
+            max-width: 1000px;
             background: #1e1e1e;
             display: flex;
             flex-direction: column;
@@ -65,18 +65,6 @@
         .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: #2196F3; }
         input:checked + .slider:before { transform: translateX(26px); }
-        .status-bar {
-            width: 100%;
-            margin-top: auto;
-            background-color: #000000;
-            color: #888;
-            padding: 10px 20px;
-            display: flex;
-            justify-content: space-between;
-            font-size: 12px;
-            box-sizing: border-box;
-            border-top: 1px solid #333;
-        }
         .status-ok { color: #2ecc71; font-weight: bold; }
         .status-error { color: #e74c3c; font-weight: bold; }
     </style>
@@ -127,12 +115,6 @@
         <a href="/" class="back-btn">Zurück zur Hauptseite</a>
     </div>
 
-    <div class="status-bar">
-        <span>Server: <span id="server-status" class="status-ok">OK</span></span>
-        <span>Letztes Update: <span id="val_timestamp">--:--:--</span></span>
-        <span id="live-clock">--:--:--</span>
-    </div>
-
     <script>
         function updateFlowAnimation(state) {
             const trackLeft = document.getElementById('track-left'), trackRight = document.getElementById('track-right'), battIcon = document.getElementById('batt-flow-icon');
@@ -160,8 +142,6 @@
             try {
                 const response = await fetch('/api');
                 const data = await response.json();
-                document.getElementById('server-status').className = 'status-ok';
-                document.getElementById('server-status').textContent = 'OK';
                 ['total_dc_power', 'daily_pv_generation', 'battery_soc', 'battery_power', 'internal_temperature', 'meter_active_power', 'daily_import_energy', 'daily_export_energy', 'timestamp'].forEach(id => {
                     const el = document.getElementById('val_' + id); if (el) el.textContent = data[id];
                 });
@@ -170,10 +150,9 @@
                 if (flowBattPowerEl) flowBattPowerEl.textContent = data.battery_power;
 
                 updateFlowAnimation(data.flow_state); updateSOCDisplay(data.battery_soc, data.flow_state);
-            } catch (e) { document.getElementById('server-status').className = 'status-error'; document.getElementById('server-status').textContent = 'Fehler'; }
+            } catch (e) { console.error("Fetch error", e); }
         }
         setInterval(fetchData, 5000); fetchData();
-        setInterval(() => { document.getElementById('live-clock').textContent = new Date().toLocaleTimeString('de-DE'); }, 1000);
     </script>
 </body>
 </html>

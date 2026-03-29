@@ -33,19 +33,6 @@
         h2 { border-bottom: 1px solid #333; width: 100%; padding-bottom: 10px; color: #ffffff; margin-top: 0; }
         .back-btn { display: block; width: 100%; padding: 15px; background: #34495e; color: white; border: none; border-radius: 6px; font-size: 16px; margin-top: 30px; cursor: pointer; text-align: center; text-decoration: none; font-weight: bold; box-sizing: border-box; transition: background 0.3s; }
         .back-btn:hover { background: #2c3e50; }
-        .status-bar {
-            width: 100%;
-            margin-top: auto;
-            background: #000000;
-            color: #666;
-            padding: 10px 20px;
-            font-size: 0.8rem;
-            display: flex;
-            justify-content: space-between;
-            box-sizing: border-box;
-        }
-        .status-ok { color: #51cf66; }
-        .status-error { color: #e74c3c; }
     </style>
 </head>
 <body>
@@ -53,31 +40,16 @@
         <h2>Heizen-Kühlen</h2>
         <p style="font-size: 1.2rem; margin: 40px 0; color: #777;">under construction</p>
         <a href="/" class="back-btn">Zurück zur Hauptseite</a>
-        
-        <div class="status-bar">
-            <span>Server: <span id="server-status" class="status-ok">Verbunden</span></span>
-            <span>Update: <span id="val_timestamp">--:--:--</span></span>
-            <span id="live-clock">--:--:--</span>
-        </div>
     </div>
 
     <script>
         async function fetchData() {
             try {
-                const response = await fetch('/api');
-                const data = await response.json();
-                document.getElementById('server-status').className = 'status-ok';
-                document.getElementById('server-status').textContent = 'Verbunden';
-                document.getElementById('val_timestamp').textContent = data.timestamp;
-            } catch (e) {
-                document.getElementById('server-status').className = 'status-error';
-                document.getElementById('server-status').textContent = 'Fehler';
-            }
+                await fetch('/api');
+            } catch (e) { console.error("Fetch error", e); }
         }
         setInterval(fetchData, 5000);
         fetchData();
-        setInterval(() => { document.getElementById('live-clock').textContent = new Date().toLocaleTimeString('de-DE'); }, 1000);
-        document.getElementById('live-clock').textContent = new Date().toLocaleTimeString('de-DE');
     </script>
 </body>
 </html>

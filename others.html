@@ -62,20 +62,6 @@
         }
         .btn-on { background: #2ecc71; }
         .btn-off { background: #e74c3c; }
-
-        .status-bar {
-            width: 100%;
-            margin-top: auto;
-            background: #000000;
-            color: #666;
-            padding: 10px 20px;
-            font-size: 0.8rem;
-            display: flex;
-            justify-content: space-between;
-            box-sizing: border-box;
-        }
-        .status-ok { color: #51cf66; }
-        .status-error { color: #e74c3c; }
     </style>
 </head>
 <body>
@@ -107,12 +93,6 @@
         </div>
 
         <a href="/" class="back-btn">Zurück zur Hauptseite</a>
-        
-        <div class="status-bar">
-            <span>Server: <span id="server-status" class="status-ok">Verbunden</span></span>
-            <span>Update: <span id="val_timestamp">--:--:--</span></span>
-            <span id="live-clock">--:--:--</span>
-        </div>
     </div>
 
     <script>
@@ -145,9 +125,6 @@
             try {
                 const response = await fetch('/api');
                 const data = await response.json();
-                document.getElementById('server-status').className = 'status-ok';
-                document.getElementById('server-status').textContent = 'Verbunden';
-                document.getElementById('val_timestamp').textContent = data.timestamp;
 
                 // Schalter-Zustände synchronisieren (außer während der 15s Wartezeit)
                 const switches = ['zisterne', 'brunnen', 'reserve'];
@@ -159,15 +136,10 @@
                         }
                     }
                 });
-            } catch (e) {
-                document.getElementById('server-status').className = 'status-error';
-                document.getElementById('server-status').textContent = 'Fehler';
-            }
+            } catch (e) { console.error("Fetch error", e); }
         }
         setInterval(fetchData, 5000);
         fetchData();
-        setInterval(() => { document.getElementById('live-clock').textContent = new Date().toLocaleTimeString('de-DE'); }, 1000);
-        document.getElementById('live-clock').textContent = new Date().toLocaleTimeString('de-DE');
     </script>
 </body>
 </html>

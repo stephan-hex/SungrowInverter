@@ -8,6 +8,7 @@ import time
 import threading
 import signal
 import datetime
+from fritz_control import FritzControl
 
 # Metadaten
 APP_NAME = "Sungrow Inverter Monitor (Headless)"
@@ -23,8 +24,24 @@ DB_UPDATE_INTERVAL = 60 # Sekunden (Schreiben in die DB)
 POLL_INTERVAL = 5 # Sekunden (Abfrageintervall, ersetzt den UI-Refresh)
 LOGGING_ENABLED = True
 
+# Debug-Einstellungen
+DEBUG_FRITZ = True
+
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), 'main_config.json')
 CHARGE_MODE = "NORMAL-CHARGING" # Default: Normal (Links), Intelligent (Rechts)
+
+# --- Fritz!Box Integration für Web-Zentrale ---
+try:
+    _fritz_cfg_path = os.path.join(os.path.dirname(__file__), "fritz_config.json")
+    with open(_fritz_cfg_path, "r", encoding="utf-8") as f:
+        FRITZ_CFG = json.load(f)
+    fritz_controller = FritzControl(FRITZ_CFG)
+except:
+    FRITZ_CFG = None
+    fritz_controller = None
+
+# Globaler Cache für Fritzbox-Zustände (wird vom Hintergrund-Thread befüllt)
+fritz_data_cache = {'fritz_zisterne': 'inval', 'fritz_brunnen': 'inval', 'fritz_reserve': 'inval'}
 
 # Register global laden
 REGISTERS = {}
@@ -190,7 +207,30 @@ def read_modbus_data_callback():
     last_data_cache['charge_mode'] = CHARGE_MODE
     # Hilfsfeld für das Template, um die Checkbox beim Laden korrekt zu setzen
     last_data_cache['charge_mode_checked'] = "checked" if CHARGE_MODE == "INTELLIGENT-CHARGING" else ""
+    
+    # Fritz-Zustände aus dem Hintergrund-Cache in den Haupt-Cache mergen
+    last_data_cache.update(fritz_data_cache)
+    
     return last_data_cache
+
+def fritz_poll_loop():
+    """Hintergrund-Thread für das FritzBox-Polling (entlastet die Hauptschleife)"""
+    print("[FritzThread] Hintergrund-Polling gestartet.")
+    while running:
+        if fritz_controller and FRITZ_CFG:
+            s1 = fritz_controller.get_state(FRITZ_CFG['fritz_ain_zisterne'])
+            s2 = fritz_controller.get_state(FRITZ_CFG['fritz_ain_brunnen'])
+            s3 = fritz_controller.get_state(FRITZ_CFG['fritz_ain_reserve'])
+            
+            fritz_data_cache['fritz_zisterne'] = s1
+            fritz_data_cache['fritz_brunnen'] = s2
+            fritz_data_cache['fritz_reserve'] = s3
+            
+            if DEBUG_FRITZ:
+                print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Fritz-Status (BG): Zisterne={s1}, Brunnen={s2}, Reserve={s3}")
+        
+        # Die FritzBox braucht nicht jede Sekunde gefragt werden, 10s ist ein guter Kompromiss
+        stop_event.wait(timeout=10)
 
 def get_cached_data():
     """Gibt den zuletzt gepollteten Datensatz zurück (kein Modbus-Zugriff)."""
@@ -225,6 +265,23 @@ def handle_web_action(command):
     elif command == "mode_surplus":
         CHARGE_MODE = "INTELLIGENT-CHARGING"
         save_config()
+    
+    # Beispiel für Fritz!Box Befehle (AIN aus fritz_config.json oder direkt)
+    elif command.startswith("fritz_"):
+        # Format: fritz_LOGISCHERNAME_on oder fritz_LOGISCHERNAME_off
+        parts = command.split("_")
+        if len(parts) == 3:
+            device_key, state = parts[1], parts[2]
+            if FRITZ_CFG and fritz_controller:
+                # Mapping: 'zistern' -> 'fritz_ain_zisterne'
+                cfg_key = f"fritz_ain_{device_key}"
+                ain = FRITZ_CFG.get(cfg_key)
+                if ain:
+                    if fritz_controller:
+                        success = fritz_controller.switch(ain, state == "on")
+                        if success:
+                            # Sofort den Cache aktualisieren, damit das UI nicht zurückspringt
+                            fritz_data_cache[f"fritz_{device_key}"] = "1" if state == "on" else "0"
 
 def get_history_data(date_str=None, cols=None):
     """Callback für Chart-Daten"""
@@ -255,6 +312,10 @@ def main():
     # Datenbank-Thread starten (Daemon, damit er beim Beenden des Programms mit stirbt)
     db_thread = threading.Thread(target=db_persist_loop, daemon=True)
     db_thread.start()
+    
+    # Fritz-Polling-Thread starten
+    fritz_thread = threading.Thread(target=fritz_poll_loop, daemon=True)
+    fritz_thread.start()
     
     print(f"Programm läuft. Daten werden alle {POLL_INTERVAL}s abgerufen. Drücke STRG+C zum Beenden.")
     

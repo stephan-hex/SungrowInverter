@@ -22,7 +22,7 @@ with open(_config_path, "r", encoding="utf-8") as _f:
 FRITZ_IP           = _fritz_cfg["fritz_ip"]
 FRITZ_USER         = _fritz_cfg["fritz_user"]
 FRITZ_PASSWORD     = _fritz_cfg["fritz_password"]
-FRITZ_AIN          = _fritz_cfg["fritz_ain"]
+FRITZ_AIN          = _fritz_cfg["fritz_ain_pv_luefter"]
 TEMP_ON_THRESHOLD  = float(_fritz_cfg["temp_on_threshold"])
 TEMP_OFF_THRESHOLD = float(_fritz_cfg["temp_off_threshold"])
 

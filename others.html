@@ -5,21 +5,169 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sonstiges</title>
     <style>
-        body { font-family: Helvetica, Arial, sans-serif; padding: 20px; background: #121212; color: #e0e0e0; }
-        .container { max-width: 800px; margin: 0 auto; background: #1e1e1e; padding: 25px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); text-align: center;}
-        h2 { border-bottom: 1px solid #333; padding-bottom: 10px; color: #ffffff; margin-top: 0; }
-        .back-btn { display: block; width: 100%; padding: 15px; background: #34495e; color: white; border: none; border-radius: 6px; font-size: 16px; margin-top: 30px; cursor: pointer; text-align: center; text-decoration: none; font-weight: bold; box-sizing: border-box; transition: background 0.3s;}
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #000000;
+            color: #e0e0e0;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .container {
+            width: 100%;
+            height: 100vh;
+            max-width: 600px;
+            max-height: 800px;
+            background: #1e1e1e;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 20px 0 20px;
+            box-sizing: border-box;
+            box-shadow: 0 10px 50px rgba(0,0,0,0.9);
+            text-align: center;
+        }
+        h2 { border-bottom: 1px solid #333; width: 100%; padding-bottom: 10px; color: #ffffff; margin-top: 0; margin-bottom: 20px; }
+        .back-btn { display: block; width: 100%; padding: 15px; background: #34495e; color: white; border: none; border-radius: 6px; font-size: 16px; margin-top: 30px; cursor: pointer; text-align: center; text-decoration: none; font-weight: bold; box-sizing: border-box; transition: background 0.3s; }
         .back-btn:hover { background: #2c3e50; }
+        
+        /* Schiebeschalter Styling */
+        .switch { position: relative; display: inline-block; width: 60px; height: 34px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #2ecc71; }
+        input:checked + .slider:before { transform: translateX(26px); }
+
+        .control-card {
+            background: #252525;
+            padding: 20px;
+            border-radius: 12px;
+            width: 100%;
+            box-sizing: border-box;
+            margin-bottom: 20px;
+        }
+        .btn-row { display: flex; gap: 10px; margin-top: 15px; }
+        .action-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            color: white;
+        }
+        .btn-on { background: #2ecc71; }
+        .btn-off { background: #e74c3c; }
+
+        .status-bar {
+            width: 100%;
+            margin-top: auto;
+            background: #000000;
+            color: #666;
+            padding: 10px 20px;
+            font-size: 0.8rem;
+            display: flex;
+            justify-content: space-between;
+            box-sizing: border-box;
+        }
+        .status-ok { color: #51cf66; }
+        .status-error { color: #e74c3c; }
     </style>
 </head>
 <body>
     <div class="container">
         <h2>Sonstiges</h2>
-        <p style="font-size: 1.2rem; margin: 40px 0; color: #777;">under construction</p>
+
+        <div class="control-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <span style="color: #bbb; font-weight: bold;">Zisterne</span>
+                <label class="switch">
+                    <input type="checkbox" id="switch_zisterne" onchange="handleToggle('zisterne', this)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <span style="color: #bbb; font-weight: bold;">Brunnen</span>
+                <label class="switch">
+                    <input type="checkbox" id="switch_brunnen" onchange="handleToggle('brunnen', this)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #bbb; font-weight: bold;">Reserve</span>
+                <label class="switch">
+                    <input type="checkbox" id="switch_reserve" onchange="handleToggle('reserve', this)">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+
         <a href="/" class="back-btn">Zurück zur Hauptseite</a>
+        
+        <div class="status-bar">
+            <span>Server: <span id="server-status" class="status-ok">Verbunden</span></span>
+            <span>Update: <span id="val_timestamp">--:--:--</span></span>
+            <span id="live-clock">--:--:--</span>
+        </div>
     </div>
-    <div style="text-align: center; margin-top: 20px; font-size: 12px; color: #999;">
-        Update: {timestamp}
-    </div>
+
+    <script>
+        // Verhindert das UI-Flackern: Nach dem Schalten wird für 15s kein Sync vom Server erzwungen
+        let lastActionTime = { zisterne: 0, brunnen: 0, reserve: 0 };
+
+        async function handleToggle(name, checkbox) {
+            const isOn = checkbox.checked;
+            const command = `fritz_${name}_${isOn ? 'on' : 'off'}`;
+            lastActionTime[name] = Date.now();
+            
+            await triggerAction(command);
+            
+            // Nach 15 Sekunden einen harten Refresh erzwingen, um den Zustand zu prüfen
+            setTimeout(() => { 
+                lastActionTime[name] = 0; 
+                fetchData(); 
+            }, 15000);
+        }
+
+        async function triggerAction(command) {
+            await fetch('/action', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({command: command})
+            });
+        }
+
+        async function fetchData() {
+            try {
+                const response = await fetch('/api');
+                const data = await response.json();
+                document.getElementById('server-status').className = 'status-ok';
+                document.getElementById('server-status').textContent = 'Verbunden';
+                document.getElementById('val_timestamp').textContent = data.timestamp;
+
+                // Schalter-Zustände synchronisieren (außer während der 15s Wartezeit)
+                const switches = ['zisterne', 'brunnen', 'reserve'];
+                switches.forEach(s => {
+                    if (Date.now() - lastActionTime[s] > 15000) {
+                        const el = document.getElementById('switch_' + s);
+                        if (el && data['fritz_' + s] !== undefined) {
+                            el.checked = (data['fritz_' + s] === "1");
+                        }
+                    }
+                });
+            } catch (e) {
+                document.getElementById('server-status').className = 'status-error';
+                document.getElementById('server-status').textContent = 'Fehler';
+            }
+        }
+        setInterval(fetchData, 5000);
+        fetchData();
+        setInterval(() => { document.getElementById('live-clock').textContent = new Date().toLocaleTimeString('de-DE'); }, 1000);
+        document.getElementById('live-clock').textContent = new Date().toLocaleTimeString('de-DE');
+    </script>
 </body>
 </html>

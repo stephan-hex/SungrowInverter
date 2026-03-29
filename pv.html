@@ -35,8 +35,10 @@
         .soc-seg.discharging { animation: soc-blink 1s ease-in-out infinite; }
         @keyframes soc-blink { 0%,100%{opacity:1} 50%{opacity:0.25} }
         .soc-label { font-weight: bold; font-size: 18px; color: #ffffff; }
-        .nav-btn { background: #34495e; border: none; color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; transition: background 0.3s;}
+        .nav-btn { background: #34495e; border: none; color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; transition: background 0.3s; text-decoration: none;}
         .nav-btn:hover { background: #2c3e50; }
+        .back-btn { display: block; width: 100%; padding: 15px; background: #34495e; color: white; border: none; border-radius: 6px; font-size: 16px; margin-top: 30px; cursor: pointer; text-align: center; text-decoration: none; font-weight: bold; transition: background 0.3s; box-sizing: border-box; }
+        .back-btn:hover { background: #2c3e50; }
         .switch { position: relative; display: inline-block; width: 60px; height: 34px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; transition: .4s; border-radius: 34px; }
@@ -72,15 +74,16 @@
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 10px; margin-top: 30px; margin-bottom: 20px;">
             <h3 style="border: none; margin: 0; padding: 0; color: #fff;">Betriebsdaten</h3>
             <div style="display: flex; gap: 10px;">
-                <button class="nav-btn" onclick="window.location.href='/'">Hauptseite</button>
-                <button class="nav-btn" onclick="window.location.href='/history'" style="background: #3498db; color: white; border: none;">Verlauf</button>
+                <a href="/history" class="nav-btn" style="background: #3498db;">Verlauf</a>
             </div>
         </div>
 
         <div class="data-grid">
-            <div class="data-row"><span class="data-label">Batterie Leistung:</span> <span class="data-value" id="val_battery_power">--</span></div>
-            <div class="data-row"><span class="data-label">Temperatur:</span> <span class="data-value" id="val_internal_temperature">--</span></div>
             <div class="data-row"><span class="data-label">Netzleistung:</span> <span class="data-value" id="val_meter_active_power">--</span></div>
+            <div class="data-row"><span class="data-label">Batterie Leistung:</span> <span class="data-value" id="val_battery_power">--</span></div>
+            <div class="data-row"><span class="data-label">Import heute:</span> <span class="data-value" id="val_daily_import_energy">--</span></div>
+            <div class="data-row"><span class="data-label">Export heute:</span> <span class="data-value" id="val_daily_export_energy">--</span></div>
+            <div class="data-row"><span class="data-label">Temperatur:</span> <span class="data-value" id="val_internal_temperature">--</span></div>
         </div>
 
         <div class="flow-container" id="flow-vis">
@@ -90,6 +93,8 @@
             <div class="flow-track" id="track-right"><span class="flow-dot" style="animation-delay:0s"></span><span class="flow-dot" style="animation-delay:0.4s"></span><span class="flow-dot" style="animation-delay:0.8s"></span></div>
             <div class="flow-node"><div class="flow-icon">🏠</div><div class="flow-node-label">Haus</div></div>
         </div>
+
+        <a href="/" class="back-btn">Zurück zur Hauptseite</a>
     </div>
 
     <div class="status-bar">
@@ -127,7 +132,7 @@
                 const data = await response.json();
                 document.getElementById('server-status').className = 'status-ok';
                 document.getElementById('server-status').textContent = 'OK';
-                ['total_dc_power', 'daily_pv_generation', 'battery_soc', 'battery_power', 'internal_temperature', 'meter_active_power', 'timestamp'].forEach(id => {
+                ['total_dc_power', 'daily_pv_generation', 'battery_soc', 'battery_power', 'internal_temperature', 'meter_active_power', 'daily_import_energy', 'daily_export_energy', 'timestamp'].forEach(id => {
                     const el = document.getElementById('val_' + id); if (el) el.textContent = data[id];
                 });
                 // Batterie-Power zusätzlich im Flow-Diagramm aktualisieren

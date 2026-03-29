@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PV Überwachung</title>
+    <style>
+        body { font-family: Helvetica, Arial, sans-serif; padding: 20px; background: #121212; color: #e0e0e0; }
+        .container { max-width: 800px; margin: 0 auto; background: #1e1e1e; padding: 25px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+        .header { display: flex; justify-content: space-between; margin-bottom: 30px; flex-wrap: wrap; gap: 20px; }
+        .header-box { text-align: center; flex: 1; min-width: 200px; }
+        .big-value { font-size: 48px; font-weight: bold; margin-top: 5px; }
+        .green { color: #2ecc71; } .blue { color: #3498db; }
+        .section-title { font-size: 18px; text-transform: uppercase; letter-spacing: 1px; color: #bbb; }
+        h3 { border-bottom: 1px solid #333; padding-bottom: 10px; margin-top: 30px; color: #ffffff; font-size: 18px; margin-bottom: 20px;}
+        .data-grid { display: grid; grid-template-columns: 1fr; gap: 0; margin-bottom: 20px; }
+        .data-row { display: flex; justify-content: space-between; border-bottom: 1px solid #252525; padding: 8px 0; }
+        .data-label { color: #bbb; }
+        .data-value { font-weight: bold; }
+        .flow-container { display: flex; align-items: center; justify-content: center; margin-top: 30px; padding: 20px 10px; background: #252525; border: 1px solid #333; border-radius: 8px; gap: 0; }
+        .flow-node { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 90px; }
+        .flow-icon { font-size: 40px; line-height: 1; }
+        .flow-node-label { font-size: 13px; color: #bbb; font-weight: bold; text-align: center; }
+        .flow-power { font-size: 12px; color: #888; }
+        .flow-track { flex: 1; height: 8px; background: #333; border-radius: 4px; position: relative; overflow: hidden; min-width: 60px; }
+        .flow-dot { position: absolute; width: 18px; height: 8px; border-radius: 4px; top: 0; opacity: 0; }
+        @keyframes flow-right { 0%{left:-10%;opacity:0} 15%{opacity:1} 85%{opacity:1} 100%{left:110%;opacity:0} }
+        @keyframes pulse-icon { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.18);opacity:0.7} }
+        .soc-bar-wrapper { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+        .soc-segments { display: flex; gap: 4px; }
+        .soc-seg { flex: 1; height: 28px; border-radius: 4px; background: #333; transition: background 0.4s; }
+        .soc-seg.filled { background: #2ecc71; }
+        .soc-seg.filled.warn { background: #e67e22; }
+        .soc-seg.filled.crit { background: #e74c3c; }
+        .soc-seg.discharging { animation: soc-blink 1s ease-in-out infinite; }
+        @keyframes soc-blink { 0%,100%{opacity:1} 50%{opacity:0.25} }
+        .soc-label { font-weight: bold; font-size: 18px; color: #ffffff; }
+        .nav-btn { background: #34495e; border: none; color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; transition: background 0.3s;}
+        .nav-btn:hover { background: #2c3e50; }
+        .switch { position: relative; display: inline-block; width: 60px; height: 34px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #2196F3; }
+        input:checked + .slider:before { transform: translateX(26px); }
+        .status-bar { position: fixed; bottom: 0; left: 0; width: 100%; background-color: #000000; color: #888; padding: 5px 20px; display: flex; justify-content: space-between; font-size: 12px; box-sizing: border-box; z-index: 100; border-top: 1px solid #333; }
+        .status-ok { color: #2ecc71; font-weight: bold; }
+        .status-error { color: #e74c3c; font-weight: bold; }
+        body { padding-bottom: 30px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-box">
+                <div class="section-title">PV Leistung</div>
+                <div class="big-value green" id="val_total_dc_power">--</div>
+            </div>
+            <div class="header-box">
+                <div class="section-title">Ertrag Heute</div>
+                <div class="big-value blue" id="val_daily_pv_generation">--</div>
+            </div>
+            <div style="flex-basis: 100%; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                <div class="section-title">Batterie SOC</div>
+                <span class="soc-bar-wrapper" style="width: 100%;">
+                    <span class="soc-segments" id="soc-segs" style="width: 100%;"></span>
+                    <span class="soc-label" id="val_battery_soc" style="align-self: center;">--</span>
+                </span>
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 10px; margin-top: 30px; margin-bottom: 20px;">
+            <h3 style="border: none; margin: 0; padding: 0; color: #fff;">Betriebsdaten</h3>
+            <div style="display: flex; gap: 10px;">
+                <button class="nav-btn" onclick="window.location.href='/'">Hauptseite</button>
+                <button class="nav-btn" onclick="window.location.href='/history'" style="background: #3498db; color: white; border: none;">Verlauf</button>
+            </div>
+        </div>
+
+        <div class="data-grid">
+            <div class="data-row"><span class="data-label">Batterie Leistung:</span> <span class="data-value" id="val_battery_power">--</span></div>
+            <div class="data-row"><span class="data-label">Temperatur:</span> <span class="data-value" id="val_internal_temperature">--</span></div>
+            <div class="data-row"><span class="data-label">Netzleistung:</span> <span class="data-value" id="val_meter_active_power">--</span></div>
+        </div>
+
+        <div class="flow-container" id="flow-vis">
+            <div class="flow-node"><div class="flow-icon">☀️</div><div class="flow-node-label">Solar</div></div>
+            <div class="flow-track" id="track-left"><span class="flow-dot" style="animation-delay:0s"></span><span class="flow-dot" style="animation-delay:0.4s"></span><span class="flow-dot" style="animation-delay:0.8s"></span></div>
+            <div class="flow-node"><div class="flow-icon" id="batt-flow-icon">🔋</div><div class="flow-node-label">Batterie</div><div class="flow-power" id="val_flow_battery_power">--</div></div>
+            <div class="flow-track" id="track-right"><span class="flow-dot" style="animation-delay:0s"></span><span class="flow-dot" style="animation-delay:0.4s"></span><span class="flow-dot" style="animation-delay:0.8s"></span></div>
+            <div class="flow-node"><div class="flow-icon">🏠</div><div class="flow-node-label">Haus</div></div>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <span>Server: <span id="server-status" class="status-ok">OK</span></span>
+        <span>Letztes Update: <span id="val_timestamp">--:--:--</span></span>
+        <span id="live-clock">--:--:--</span>
+    </div>
+
+    <script>
+        function updateFlowAnimation(state) {
+            const trackLeft = document.getElementById('track-left'), trackRight = document.getElementById('track-right'), battIcon = document.getElementById('batt-flow-icon');
+            trackLeft.style.background = trackRight.style.background = '#333';
+            battIcon.style.animation = 'none';
+            document.querySelectorAll('.flow-dot').forEach(d => { d.style.animation = 'none'; d.style.background = 'transparent'; });
+            function activate(track, color) { track.style.background = color + '33'; track.querySelectorAll('.flow-dot').forEach(d => { d.style.background = color; d.style.animation = 'flow-right 1.2s linear infinite'; }); }
+            if (state === 'charging') activate(trackLeft, '#2ecc71');
+            else if (state === 'discharging') activate(trackRight, '#e67e22');
+            else battIcon.style.animation = 'pulse-icon 2s ease-in-out infinite';
+        }
+
+        function updateSOCDisplay(socText, flowState) {
+            const num = parseFloat(socText); if (isNaN(num)) return;
+            const filled = Math.round(num / 10), segs = document.getElementById('soc-segs');
+            segs.innerHTML = '';
+            for (let i = 1; i <= 10; i++) {
+                const seg = document.createElement('span'); seg.className = 'soc-seg';
+                if (i <= filled) { seg.classList.add('filled'); if (filled <= 1) seg.classList.add('crit'); if (flowState === 'discharging' && i === filled) seg.classList.add('discharging'); }
+                segs.appendChild(seg);
+            }
+        }
+
+        async function fetchData() {
+            try {
+                const response = await fetch('/api');
+                const data = await response.json();
+                document.getElementById('server-status').className = 'status-ok';
+                document.getElementById('server-status').textContent = 'OK';
+                ['total_dc_power', 'daily_pv_generation', 'battery_soc', 'battery_power', 'internal_temperature', 'meter_active_power', 'timestamp'].forEach(id => {
+                    const el = document.getElementById('val_' + id); if (el) el.textContent = data[id];
+                });
+                // Batterie-Power zusätzlich im Flow-Diagramm aktualisieren
+                const flowBattPowerEl = document.getElementById('val_flow_battery_power');
+                if (flowBattPowerEl) flowBattPowerEl.textContent = data.battery_power;
+
+                updateFlowAnimation(data.flow_state); updateSOCDisplay(data.battery_soc, data.flow_state);
+            } catch (e) { document.getElementById('server-status').className = 'status-error'; document.getElementById('server-status').textContent = 'Fehler'; }
+        }
+        setInterval(fetchData, 5000); fetchData();
+        setInterval(() => { document.getElementById('live-clock').textContent = new Date().toLocaleTimeString('de-DE'); }, 1000);
+    </script>
+</body>
+</html>

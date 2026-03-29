@@ -3,315 +3,215 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sungrow Inverter Monitor</title>
+    <title>Heimzentrale</title>
     <style>
-        body { font-family: Helvetica, Arial, sans-serif; padding: 20px; background: #f0f2f5; color: #333; }
-        .container { max-width: 800px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .header { display: flex; justify-content: space-between; margin-bottom: 30px; flex-wrap: wrap; gap: 20px; }
-        .header-box { text-align: center; flex: 1; min-width: 200px; }
-        .big-value { font-size: 48px; font-weight: bold; margin-top: 5px; }
-        .green { color: #2ecc71; } .blue { color: #3498db; }
-        .section-title { font-size: 18px; text-transform: uppercase; letter-spacing: 1px; color: #666; }
-        h3 { border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 30px; color: #444; font-size: 18px; margin-bottom: 20px;}
-        .data-grid { display: grid; grid-template-columns: 1fr; gap: 0; margin-bottom: 20px; } /* Simplified for better mobile view */
-        .data-row { display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding: 8px 0; }
-        .data-label { color: #555; }
-        .data-value { font-weight: bold; }
-        .flow-box { border: 2px solid #eee; padding: 20px; text-align: center; border-radius: 8px; font-size: 40px; font-weight: bold; background: #fafafa; margin-top: 30px; transition: color 0.3s; }
-        .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #999; }
-        /* Energie-Fluss Visualisierung */
-        .flow-container { display: flex; align-items: center; justify-content: center; margin-top: 30px; padding: 20px 10px; background: #fafafa; border: 2px solid #eee; border-radius: 8px; gap: 0; }
-        .flow-node { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 90px; }
-        .flow-icon { font-size: 40px; line-height: 1; }
-        .flow-node-label { font-size: 13px; color: #555; font-weight: bold; text-align: center; }
-        .flow-power { font-size: 12px; color: #888; }
-        .flow-track { flex: 1; height: 8px; background: #e0e0e0; border-radius: 4px; position: relative; overflow: hidden; min-width: 60px; }
-        .flow-dot { position: absolute; width: 18px; height: 8px; border-radius: 4px; top: 0; opacity: 0; }
-        @keyframes flow-right { 0%{left:-10%;opacity:0} 15%{opacity:1} 85%{opacity:1} 100%{left:110%;opacity:0} }
-        @keyframes pulse-icon { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.18);opacity:0.7} }
-        .soc-bar-wrapper { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
-        .soc-segments { display: flex; gap: 4px; }
-        .soc-seg { flex: 1; height: 28px; border-radius: 4px; background: #e0e0e0; transition: background 0.4s; }
-        .soc-seg.filled { background: #2ecc71; }
-        .soc-seg.filled.warn { background: #e67e22; }
-        .soc-seg.filled.crit { background: #e74c3c; }
-        .soc-seg.discharging { animation: soc-blink 1s ease-in-out infinite; }
-        @keyframes soc-blink { 0%,100%{opacity:1} 50%{opacity:0.25} }
-        .soc-label { font-weight: bold; font-size: 18px; color: #444; }
-        /* Button Styling */
-        .btn { background-color: #5dade2; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 1em; flex: 1; max-width: 150px; transition: background-color 0.2s, transform 0.1s; }
-        .btn:hover { background-color: #3498db; }
-        .btn:active { transform: translateY(1px); }
-        .nav-btn { background: #ecf0f1; border: 1px solid #bdc3c7; color: #2c3e50; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold;}
-        .nav-btn:hover { background: #bdc3c7; }
-        /* Toggle Switch Styling */
-        .switch { position: relative; display: inline-block; width: 60px; height: 34px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
-        .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: #2196F3; }
-        input:checked + .slider:before { transform: translateX(26px); }
-        /* Status Bar Styling */
+        :root {
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --accent-color: #e30613;
+            --card-bg: #1e1e1e;
+            --btn-bg: #2c2c2c;
+            --btn-shadow: rgba(0, 0, 0, 0.5);
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #000000;
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .hub-container {
+            width: 100vw;
+            height: calc(100vw * 4 / 3);
+            max-width: 600px;
+            max-height: 800px;
+            background-color: var(--card-bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+            position: relative;
+            box-shadow: 0 10px 50px rgba(0,0,0,0.9);
+        }
+
+        .date-display { text-align: center; margin-top: 10px; }
+        .date-display h1 { margin: 0; font-size: 1.5rem; color: #bbb; font-weight: 300; }
+        .date-display h2 { margin: 5px 0; font-size: 1.2rem; color: var(--accent-color); }
+
+        .clock-container { width: 220px; height: 220px; margin: 20px 0; }
+        #station-clock { width: 100%; height: 100%; }
+
+        .weather-widget {
+            text-align: center; margin: 10px 0; padding: 15px; background: #252525;
+            border-radius: 15px; width: 80%; box-shadow: 0 4px 6px var(--btn-shadow);
+            color: #ffffff;
+        }
+        /* Wetter Animationen */
+        @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes drift { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(5px); } }
+        @keyframes rain { 0% { opacity: 0; transform: translateY(0); } 50% { opacity: 1; } 100% { opacity: 0; transform: translateY(10px); } }
+        @keyframes pulse-icon { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.1);opacity:0.7} }
+        .weather-temp { font-size: 2.5rem; font-weight: bold; }
+
+        .button-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+            width: 100%; margin-top: 30px; padding: 0 10px;
+        }
+
+        .nav-button {
+            background: var(--btn-bg); border: none; padding: 25px 10px;
+            border-radius: 12px; font-size: 1.1rem; font-weight: bold;
+            color: #ffffff; box-shadow: 0 4px 10px var(--btn-shadow);
+            cursor: pointer; transition: transform 0.1s, background-color 0.2s;
+            text-decoration: none; display: flex; justify-content: center;
+            align-items: center; text-align: center;
+        }
+        .nav-button:active { transform: scale(0.95); background-color: #3d3d3d; }
+
         .status-bar {
-            position: fixed;
+            position: absolute;
             bottom: 0;
-            left: 0;
             width: 100%;
-            background-color: #34495e;
-            color: white;
-            padding: 5px 20px;
+            background: #000000;
+            color: #666;
+            padding: 8px 20px;
+            font-size: 0.8rem;
             display: flex;
             justify-content: space-between;
-            font-size: 12px;
             box-sizing: border-box;
-            z-index: 100;
         }
-        .status-ok { color: #2ecc71; font-weight: bold; }
-        .status-error { color: #e74c3c; font-weight: bold; }
-        body { padding-bottom: 30px; } /* Platz für die fixe Statusleiste schaffen */
+        .status-online { color: #51cf66; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div class="header-box">
-                <div class="section-title">Aktuelle PV Leistung</div>
-                <div class="big-value green" id="val_total_dc_power">{total_dc_power}</div>
-            </div>
-            <div class="header-box">
-                <div class="section-title">Tagesertrag</div>
-                <div class="big-value blue" id="val_daily_pv_generation">{daily_pv_generation}</div>
-            </div>
-            <div style="flex-basis: 100%; display: flex; flex-direction: column; align-items: center; gap: 4px;">
-                <div class="section-title">Batterie SOC</div>
-                <span class="soc-bar-wrapper" style="width: 100%;">
-                    <span class="soc-segments" id="soc-segs" style="width: 100%;"></span>
-                    <span class="soc-label" id="val_battery_soc" style="align-self: center;">{battery_soc}</span>
-                </span>
-            </div>
+
+    <div class="hub-container">
+        <div class="date-display">
+            <h1 id="current-date">--. --. ----</h1>
+            <h2 id="current-weekday">Montag</h2>
         </div>
 
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 30px; margin-bottom: 20px;">
-            <h3 style="border: none; margin: 0; padding: 0;">Betriebsdaten</h3>
-            <button class="nav-btn" onclick="window.location.href='/history'" style="background: #3498db; color: white; border: none;">Verlauf &raquo;</button>
-        </div>
-        <div class="data-grid">
-            <div class="data-row"><span class="data-label">Batterie Leistung:</span> <span class="data-value" id="val_battery_power">{battery_power}</span></div>
-            <div class="data-row"><span class="data-label">Interne Temperatur:</span> <span class="data-value" id="val_internal_temperature">{internal_temperature}</span></div>
-            <div class="data-row"><span class="data-label">Netzleistung (Active):</span> <span class="data-value" id="val_meter_active_power">{meter_active_power}</span></div>
-            <div class="data-row"><span class="data-label">Import heute:</span> <span class="data-value" id="val_daily_import_energy">{daily_import_energy}</span></div>
-            <div class="data-row"><span class="data-label">Export heute:</span> <span class="data-value" id="val_daily_export_energy">{daily_export_energy}</span></div>
-            <div class="data-row"><span class="data-label">Gesamtertrag:</span> <span class="data-value" id="val_total_pv_generation">{total_pv_generation}</span></div>
-        </div>
-
-        <div class="flow-container" id="flow-vis">
-            <div class="flow-node">
-                <div class="flow-icon">☀️</div>
-                <div class="flow-node-label">Solar</div>
-            </div>
-            <div class="flow-track" id="track-left">
-                <span class="flow-dot" style="animation-delay:0s"></span>
-                <span class="flow-dot" style="animation-delay:0.4s"></span>
-                <span class="flow-dot" style="animation-delay:0.8s"></span>
-            </div>
-            <div class="flow-node">
-                <div class="flow-icon" id="batt-flow-icon">🔋</div>
-                <div class="flow-node-label">Batterie</div>
-                <div class="flow-power" id="val_flow_battery_power">{battery_power}</div>
-            </div>
-            <div class="flow-track" id="track-right">
-                <span class="flow-dot" style="animation-delay:0s"></span>
-                <span class="flow-dot" style="animation-delay:0.4s"></span>
-                <span class="flow-dot" style="animation-delay:0.8s"></span>
-            </div>
-            <div class="flow-node">
-                <div class="flow-icon">🏠</div>
-                <div class="flow-node-label">Haus</div>
-            </div>
+        <div class="clock-container">
+            <svg id="station-clock" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="48" fill="#1e1e1e" stroke="#444" stroke-width="2"/>
+                <g id="marks"></g>
+                <line id="hour" x1="50" y1="50" x2="50" y2="25" stroke="white" stroke-width="4" stroke-linecap="butt"/>
+                <line id="minute" x1="50" y1="50" x2="50" y2="15" stroke="white" stroke-width="3" stroke-linecap="butt"/>
+                <g id="second-group">
+                    <line id="second" x1="50" y1="50" x2="50" y2="12" stroke="#e30613" stroke-width="1"/>
+                    <circle cx="50" cy="12" r="3" fill="#e30613"/>
+                </g>
+                <circle cx="50" cy="50" r="2" fill="white"/>
+            </svg>
         </div>
 
-
-        <!-- Charge-Control Toggle -->
-        <div class="header-box" style="margin-top: 20px; width: 100%;">
-            <div class="section-title">Wallbox-Lademodus</div>
-            <div style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 15px;">
-                <span style="font-weight: bold; color: #555;">Normal</span>
-                <label class="switch">
-                    <input type="checkbox" id="mode-toggle" onchange="toggleMode(this)" {charge_mode_checked}>
-                    <span class="slider"></span>
-                </label>
-                <span style="font-weight: bold; color: #555;">Intelligent</span>
-            </div>
-            <div style="margin-top:5px; font-size: 0.9em; color: #777;">Aktuell: <span id="val_charge_mode">{charge_mode}</span></div>
+        <div class="weather-widget">
+            <div id="weather-icon" style="height: 60px; margin-bottom: 5px; display: flex; justify-content: center; align-items: center;"></div>
+            <div>Bad Boll</div>
+            <div class="weather-temp" id="weather-temp">--°C</div>
+            <div id="weather-desc">Lade Wetter...</div>
         </div>
 
-    </div>
+        <div class="button-grid">
+            <a href="/pv" class="nav-button">PV</a>
+            <a href="/charge.html" class="nav-button">Laden</a>
+            <a href="/heating-cooling.html" class="nav-button">Heizen-Kühlen</a>
+            <a href="/others.html" class="nav-button">Sonstiges</a>
+        </div>
 
-    <div class="status-bar">
-        <span>Server: <span id="server-status" class="status-ok">OK</span></span>
-        <span>Letztes Update: <span id="val_timestamp">{timestamp}</span></span>
-        <span id="live-clock">--:--:--</span>
+        <div class="status-bar">
+            <span>Server: <span id="server-status" class="status-online">Verbunden</span></span>
+            <span>Update: <span id="last-update">--:--:--</span></span>
+        </div>
     </div>
 
     <script>
-        function updateFlowAnimation(state) {
-            var trackLeft  = document.getElementById('track-left');
-            var trackRight = document.getElementById('track-right');
-            var battIcon   = document.getElementById('batt-flow-icon');
-
-            // Reset styles
-            trackLeft.style.background = '#e0e0e0';
-            trackRight.style.background = '#e0e0e0';
-            battIcon.style.animation = 'none';
-            
-            document.querySelectorAll('.flow-dot').forEach(function(d) {
-                d.style.animation = 'none';
-                d.style.background = 'transparent';
-            });
-
-            function activateTrack(track, color) {
-                track.style.background = color + '33';
-                var dots = track.querySelectorAll('.flow-dot');
-                dots.forEach(function(d) {
-                    d.style.background = color;
-                    d.style.animation = 'flow-right 1.2s linear infinite';
-                });
-            }
-
-            if (state === 'charging') {
-                activateTrack(trackLeft, '#2ecc71');
-            } else if (state === 'discharging') {
-                activateTrack(trackRight, '#e67e22');
-            } else {
-                battIcon.style.animation = 'pulse-icon 2s ease-in-out infinite';
-            }
-        }
-    </script>
-    <script>
-        function updateSOCDisplay(socText, flowState) {
-            var num = parseFloat(socText);
-            if (isNaN(num)) return;
-            var filled = Math.round(num / 10); // 0..10 Segmente
-            var discharging = flowState === 'discharging';
-            var segs = document.getElementById('soc-segs');
-            segs.innerHTML = ''; // Clear previous segments
-
-            for (var i = 1; i <= 10; i++) {
-                var seg = document.createElement('span');
-                seg.className = 'soc-seg';
-                if (i <= filled) {
-                    seg.classList.add('filled');
-                    if (filled <= 1) seg.classList.add('crit');
-                    else if (filled <= 2) seg.classList.add('warn');
-                    if (discharging && i === filled) seg.classList.add('discharging');
-                }
-                segs.appendChild(seg);
-            }
-        }
-    </script>
-    
-    <!-- Neue Haupt-Logik für AJAX und Buttons -->
-    <script>
-        // Initiale Aufrufe mit Template-Werten beim Laden der Seite
-        document.addEventListener('DOMContentLoaded', function() {
-            updateFlowAnimation('{flow_state}');
-            updateSOCDisplay(document.getElementById('val_battery_soc').textContent, '{flow_state}');
-            updateClock(); // Uhr sofort initialisieren
-        });
-
-        async function fetchData() {
-            const serverStatusEl = document.getElementById('server-status');
-            try {
-                const response = await fetch('/api');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const data = await response.json();
-
-                // Server Status bei Erfolg
-                if (serverStatusEl) {
-                    serverStatusEl.textContent = 'OK';
-                    serverStatusEl.className = 'status-ok';
-                }
-
-                // Text-Werte aktualisieren
-                const idsToUpdate = [
-                    'total_dc_power', 'daily_pv_generation', 'battery_soc', 
-                    'battery_power', 'internal_temperature', 'meter_active_power',
-                    'daily_import_energy', 'daily_export_energy', 'total_pv_generation',
-                    'timestamp'
-                ];
-
-                idsToUpdate.forEach(id => {
-                    const el = document.getElementById('val_' + id);
-                    if (el && data[id] !== undefined) {
-                        el.textContent = data[id];
-                    }
-                });
-                // Sonderfall für Batterie-Power im Flow-Diagramm
-                const flowBattPowerEl = document.getElementById('val_flow_battery_power');
-                if (flowBattPowerEl && data.battery_power !== undefined) {
-                    flowBattPowerEl.textContent = data.battery_power;
-                }
-                
-                // Toggle Switch Status aktualisieren (falls von anderem Client geändert)
-                const toggleEl = document.getElementById('mode-toggle');
-                if (toggleEl && data.charge_mode) {
-                    document.getElementById('val_charge_mode').textContent = data.charge_mode;
-                    // Checkbox setzen: Surplus = Checked, Normal = Unchecked
-                    toggleEl.checked = (data.charge_mode === 'INTELLIGENT-CHARGING');
-                }
-
-                // Visuelle Elemente aktualisieren
-                updateFlowAnimation(data.flow_state);
-                updateSOCDisplay(data.battery_soc, data.flow_state);
-
-            } catch (e) {
-                // Server Status bei Fehler
-                if (serverStatusEl) {
-                    serverStatusEl.textContent = 'Fehler';
-                    serverStatusEl.className = 'status-error';
-                }
-                console.error("Fehler beim Abrufen der Daten:", e);
-            }
+        function updateDate() {
+            const now = new Date();
+            const dateOptions = { day: '2-digit', month: 'long', year: 'numeric' };
+            const weekdayOptions = { weekday: 'long' };
+            document.getElementById('current-date').textContent = now.toLocaleDateString('de-DE', dateOptions);
+            document.getElementById('current-weekday').textContent = now.toLocaleDateString('de-DE', weekdayOptions);
         }
 
-        function toggleMode(checkbox) {
-            const isIntelligent = checkbox.checked;
-            const command = isIntelligent ? 'mode_surplus' : 'mode_normal';
-            
-            // Optimistisches UI-Update für sofortiges Feedback
-            const modeText = isIntelligent ? 'INTELLIGENT-CHARGING' : 'NORMAL-CHARGING';
-            const modeLabel = document.getElementById('val_charge_mode');
-            if (modeLabel) {
-                modeLabel.textContent = modeText;
+        function createClockMarks() {
+            const marks = document.getElementById('marks');
+            for (let i = 0; i < 60; i++) {
+                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                const angle = i * 6;
+                const isHour = i % 5 === 0;
+                const r1 = isHour ? 38 : 42;
+                const r2 = 46;
+                line.setAttribute("x1", 50 + r1 * Math.sin(angle * Math.PI / 180));
+                line.setAttribute("y1", 50 - r1 * Math.cos(angle * Math.PI / 180));
+                line.setAttribute("x2", 50 + r2 * Math.sin(angle * Math.PI / 180));
+                line.setAttribute("y2", 50 - r2 * Math.cos(angle * Math.PI / 180));
+                line.setAttribute("stroke", isHour ? "white" : "#666");
+                line.setAttribute("stroke-width", isHour ? 2.5 : 0.8);
+                marks.appendChild(line);
             }
-
-            triggerAction(command);
-        }
-
-        async function triggerAction(command) {
-            console.log(`Sende Aktion: ${command}`);
-            await fetch('/action', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({command: command})
-            });
         }
 
         function updateClock() {
             const now = new Date();
-            const timeString = now.toLocaleTimeString('de-DE');
-            const clockEl = document.getElementById('live-clock');
-            if (clockEl) {
-                clockEl.textContent = timeString;
+            const s = now.getSeconds(), m = now.getMinutes(), h = now.getHours();
+            const sDeg = s * 6, mDeg = m * 6 + s * 0.1, hDeg = (h % 12) * 30 + m * 0.5;
+            document.getElementById('hour').setAttribute("transform", `rotate(${hDeg} 50 50)`);
+            document.getElementById('minute').setAttribute("transform", `rotate(${mDeg} 50 50)`);
+            document.getElementById('second-group').setAttribute("transform", `rotate(${sDeg} 50 50)`);
+            document.getElementById('last-update').textContent = now.toLocaleTimeString('de-DE');
+        }
+
+        async function updateWeather() {
+            try {
+                const lat = 48.6401, lon = 9.6146;
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`;
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Wetter-API nicht erreichbar');
+                const data = await response.json();
+                const temp = Math.round(data.current_weather.temperature);
+                const code = data.current_weather.weathercode;
+
+                const icons = {
+                    clear: '<svg viewBox="0 0 64 64" width="50" height="50"><circle cx="32" cy="32" r="12" fill="#ffce54" style="animation: rotate 10s linear infinite; transform-origin: center;"/><g style="animation: rotate 20s linear infinite; transform-origin: center;"><line x1="32" y1="10" x2="32" y2="18" stroke="#ffce54" stroke-width="3" stroke-linecap="round"/><line x1="32" y1="46" x2="32" y2="54" stroke="#ffce54" stroke-width="3" stroke-linecap="round"/><line x1="10" y1="32" x2="18" y2="32" stroke="#ffce54" stroke-width="3" stroke-linecap="round"/><line x1="46" y1="32" x2="54" y2="32" stroke="#ffce54" stroke-width="3" stroke-linecap="round"/><line x1="16.5" y1="16.5" x2="22.1" y2="22.1" stroke="#ffce54" stroke-width="3" stroke-linecap="round"/><line x1="41.9" y1="41.9" x2="47.5" y2="47.5" stroke="#ffce54" stroke-width="3" stroke-linecap="round"/><line x1="16.5" y1="47.5" x2="22.1" y2="41.9" stroke="#ffce54" stroke-width="3" stroke-linecap="round"/><line x1="41.9" y1="22.1" x2="47.5" y2="16.5" stroke="#ffce54" stroke-width="3" stroke-linecap="round"/></g></svg>',
+                    cloudy: '<svg viewBox="0 0 64 64" width="50" height="50"><path d="M46,38c0,4.4-3.6,8-8,8H22c-5.5,0-10-4.5-10-10c0-4.8,3.4-8.9,8-9.8c0.6-4.4,4.4-7.8,9-7.8c3.1,0,5.8,1.6,7.4,4c1.1-0.7,2.4-1.1,3.8-1.1c3.9,0,7,3.1,7,7c0,0.3,0,0.6-0.1,0.9C44.6,30.3,46,32.5,46,35C46,35,46,38,46,38z" fill="#ecf0f1" style="animation: drift 4s ease-in-out infinite;"/></svg>',
+                    rain: '<svg viewBox="0 0 64 64" width="50" height="50"><path d="M46,38c0,4.4-3.6,8-8,8H22c-5.5,0-10-4.5-10-10c0-4.8,3.4-8.9,8-9.8c0.6-4.4,4.4-7.8,9-7.8c3.1,0,5.8,1.6,7.4,4c1.1-0.7,2.4-1.1,3.8-1.1c3.9,0,7,3.1,7,7c0,0.3,0,0.6-0.1,0.9C44.6,30.3,46,32.5,46,35C46,35,46,38,46,38z" fill="#ecf0f1"/><line x1="24" y1="48" x2="22" y2="54" stroke="#3498db" stroke-width="2" stroke-linecap="round" style="animation: rain 1s linear infinite;"/><line x1="32" y1="48" x2="30" y2="54" stroke="#3498db" stroke-width="2" stroke-linecap="round" style="animation: rain 1s linear infinite 0.3s;"/><line x1="40" y1="48" x2="38" y2="54" stroke="#3498db" stroke-width="2" stroke-linecap="round" style="animation: rain 1s linear infinite 0.6s;"/></svg>',
+                    thunder: '<svg viewBox="0 0 64 64" width="50" height="50"><path d="M46,38c0,4.4-3.6,8-8,8H22c-5.5,0-10-4.5-10-10c0-4.8,3.4-8.9,8-9.8c0.6-4.4,4.4-7.8,9-7.8c3.1,0,5.8,1.6,7.4,4c1.1-0.7,2.4-1.1,3.8-1.1c3.9,0,7,3.1,7,7c0,0.3,0,0.6-0.1,0.9C44.6,30.3,46,32.5,46,35C46,35,46,38,46,38z" fill="#ecf0f1"/><polygon points="30,46 25,54 30,54 28,62 38,50 32,50 35,46" fill="#f1c40f" style="animation: pulse-icon 1s infinite;"/></svg>'
+                };
+
+                const weatherMap = { 
+                    0: { text: "Klar", icon: icons.clear }, 
+                    1: { text: "Heiter", icon: icons.clear }, 
+                    2: { text: "Leicht bewölkt", icon: icons.cloudy }, 
+                    3: { text: "Bedeckt", icon: icons.cloudy }, 
+                    45: { text: "Nebel", icon: icons.cloudy }, 
+                    61: { text: "Leichter Regen", icon: icons.rain }, 
+                    63: { text: "Regen", icon: icons.rain }, 
+                    80: { text: "Schauer", icon: icons.rain }, 
+                    95: { text: "Gewitter", icon: icons.thunder } 
+                };
+
+                const weather = weatherMap[code] || { text: "Unbekannt", icon: icons.cloudy };
+                document.getElementById('weather-temp').textContent = `${temp}°C`;
+                document.getElementById('weather-desc').textContent = weather.text;
+                document.getElementById('weather-icon').innerHTML = weather.icon;
+            } catch (error) {
+                document.getElementById('weather-desc').textContent = "Fehler";
             }
         }
 
-        // Alle 5 Sekunden aktualisieren
-        setInterval(fetchData, 5000);
-        // Uhr jede Sekunde aktualisieren
+        createClockMarks();
         setInterval(updateClock, 1000);
+        setInterval(updateDate, 60000);
+        setInterval(updateWeather, 1800000);
+        updateClock(); updateDate(); updateWeather();
     </script>
 </body>
 </html>

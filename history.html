@@ -5,30 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Leistungsverlauf - Sungrow</title>
     <style>
-        body { font-family: Helvetica, Arial, sans-serif; padding: 20px; background: #f0f2f5; color: #333; }
-        .container { max-width: 800px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        h2 { border-bottom: 2px solid #eee; padding-bottom: 10px; color: #444; margin-top: 0; }
-        .nav-btn { background: #ecf0f1; border: 1px solid #bdc3c7; color: #2c3e50; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold;}
-        .nav-btn:hover { background: #bdc3c7; }
-        .back-btn { display: block; width: 100%; padding: 15px; background: #95a5a6; color: white; border: none; border-radius: 6px; font-size: 16px; margin-top: 30px; cursor: pointer; }
-        .back-btn:hover { background: #7f8c8d; }
+        body { font-family: Helvetica, Arial, sans-serif; padding: 20px; background: #121212; color: #e0e0e0; }
+        .container { max-width: 800px; margin: 0 auto; background: #1e1e1e; padding: 25px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+        h2 { border-bottom: 1px solid #333; padding-bottom: 10px; color: #ffffff; margin-top: 0; }
+        .nav-btn { background: #34495e; border: none; color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; transition: background 0.3s;}
+        .nav-btn:hover { background: #2c3e50; }
+        .back-btn { display: block; width: 100%; padding: 15px; background: #34495e; color: white; border: none; border-radius: 6px; font-size: 16px; margin-top: 30px; cursor: pointer; }
+        .back-btn:hover { background: #2c3e50; }
         .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #999; }
-        .controls { margin-bottom: 15px; background: #fafafa; padding: 10px; border-radius: 8px; border: 1px solid #eee; display: flex; flex-wrap: wrap; gap: 15px; }
-        .checkbox-label { display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 14px; user-select: none; }
+        .controls { margin-bottom: 15px; background: #252525; padding: 10px; border-radius: 8px; border: 1px solid #333; display: flex; flex-wrap: wrap; gap: 15px; }
+        .checkbox-label { display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 14px; user-select: none; color: #bbb; }
         /* Status Bar Styling */
         .status-bar {
             position: fixed;
             bottom: 0;
             left: 0;
             width: 100%;
-            background-color: #34495e;
-            color: white;
+            background-color: #000000;
+            color: #888;
             padding: 5px 20px;
             display: flex;
             justify-content: space-between;
             font-size: 12px;
             box-sizing: border-box;
             z-index: 100;
+            border-top: 1px solid #333;
         }
         .status-ok { color: #2ecc71; font-weight: bold; }
         .status-error { color: #e74c3c; font-weight: bold; }
@@ -37,11 +38,11 @@
 </head>
 <body>
     <div class="container">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px;">
-            <h2 style="border: none; margin: 0; padding: 0;">DC-Leistungsverlauf</h2>
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 20px;">
+            <h2 style="border: none; margin: 0; padding: 0; color: #fff;">DC-Leistungsverlauf</h2>
             <div style="display: flex; gap: 10px; align-items: center;">
                 <button class="nav-btn" onclick="changeDate(-1)">&#9664;</button>
-                <span id="chart-date-display" style="font-size: 14px; font-weight: bold; min-width: 100px; text-align: center; color: #555;">Heute</span>
+                <span id="chart-date-display" style="font-size: 14px; font-weight: bold; min-width: 100px; text-align: center; color: #bbb;">Heute</span>
                 <button class="nav-btn" onclick="changeDate(1)">&#9654;</button>
             </div>
         </div>
@@ -200,14 +201,17 @@
                     },
                     scales: {
                         x: { 
-                            ticks: { maxTicksLimit: 12, font: { size: 11 } } 
+                            grid: { color: '#333' },
+                            ticks: { maxTicksLimit: 12, color: '#aaa', font: { size: 11 } } 
                         },
                         y: { 
                             type: 'linear',
                             display: true,
                             position: 'left',
                             beginAtZero: true, 
-                            title: { display: true, text: 'Watt' } 
+                            grid: { color: '#333' },
+                            ticks: { color: '#aaa' },
+                            title: { display: true, text: 'Watt', color: '#fff' } 
                         },
                         y1: {
                             type: 'linear',
@@ -215,11 +219,12 @@
                             position: 'right',
                             min: 0,
                             max: 100,
-                            grid: { drawOnChartArea: false }, // Gitterlinien nur von linker Achse
-                            title: { display: true, text: 'SOC (%)' }
+                            grid: { drawOnChartArea: false },
+                            ticks: { color: '#aaa' },
+                            title: { display: true, text: 'SOC (%)', color: '#fff' }
                         }
                     },
-                    plugins: { legend: { display: true } }
+                    plugins: { legend: { labels: { color: '#fff' } } }
                 }
                 });
             })

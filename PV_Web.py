@@ -1,10 +1,15 @@
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
+from socketserver import ThreadingMixIn
 import os
 import time
 import json
 import socket
 from urllib.parse import urlparse, parse_qs
+
+class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
+    """Erlaubt parallele Anfragen, damit die API den Seitenaufruf nicht blockiert."""
+    daemon_threads = True
 
 class PV_Web:
     def __init__(self, fetch_data_callback, action_callback=None, fetch_history_callback=None, port=8080):
@@ -12,14 +17,17 @@ class PV_Web:
         self.action_callback = action_callback
         self.fetch_history_callback = fetch_history_callback
         self.port = port
-        self.template_path = os.path.join(os.path.dirname(__file__), 'index.html')
+        self.template_path = os.path.join(os.path.dirname(__file__), 'index.html') # Hub
+        self.pv_template_path = os.path.join(os.path.dirname(__file__), 'pv.html')  # PV Details
+        self.charge_template_path = os.path.join(os.path.dirname(__file__), 'charge.html')
+        self.heating_template_path = os.path.join(os.path.dirname(__file__), 'heating-cooling.html')
+        self.others_template_path = os.path.join(os.path.dirname(__file__), 'others.html')
         self.history_template_path = os.path.join(os.path.dirname(__file__), 'history.html')
 
     def start(self):
         handler_class = self._create_handler()
-        # Erlaubt den sofortigen Neustart des Ports
-        HTTPServer.allow_reuse_address = True
-        server = HTTPServer(('0.0.0.0', self.port), handler_class)
+        ThreadedHTTPServer.allow_reuse_address = True
+        server = ThreadedHTTPServer(('0.0.0.0', self.port), handler_class)
         
         # Eigene IP-Adresse im Netzwerk ermitteln (für die Anzeige)
         host_ip = "localhost"
@@ -96,51 +104,30 @@ class PV_Web:
                     self.send_response(200)
                     self.send_header('Content-type', 'text/html; charset=utf-8')
                     self.end_headers()
-                    
-                    # Template laden
-                    content = ""
-                    try:
-                        if os.path.exists(pv_web_instance.history_template_path):
-                            with open(pv_web_instance.history_template_path, 'r', encoding='utf-8') as f:
-                                content = f.read()
-                        else:
-                            content = "<h1>Fehler: history.html nicht gefunden</h1>"
-                    except Exception as e:
-                        content = f"<h1>Fehler beim Lesen der Datei: {e}</h1>"
-                    
-                    # Auch hier Platzhalter ersetzen (z.B. für Timestamp im Footer)
-                    raw_data = pv_web_instance.fetch_data_callback()
-                    replacements = pv_web_instance._enrich_data(raw_data)
-                    for key, val in replacements.items():
-                        content = content.replace(f"{{{key}}}", str(val))
-                        
-                    self.wfile.write(content.encode('utf-8'))
+                    with open(pv_web_instance.history_template_path, 'rb') as f:
+                        self.wfile.write(f.read())
 
-                elif self.path == '/':
+                elif self.path in ['/', '/pv', '/charge.html', '/heating-cooling.html', '/others.html']:
                     self.send_response(200)
                     self.send_header('Content-type', 'text/html; charset=utf-8')
                     self.end_headers()
-                    
-                    # Aktuelle Daten holen
-                    raw_data = pv_web_instance.fetch_data_callback()
-                    replacements = pv_web_instance._enrich_data(raw_data)
-                    
-                    # Template laden
-                    content = ""
-                    try:
-                        if os.path.exists(pv_web_instance.template_path):
-                            with open(pv_web_instance.template_path, 'r', encoding='utf-8') as f:
-                                content = f.read()
-                        else:
-                            content = "<h1>Fehler: index.html nicht gefunden</h1>"
-                    except Exception as e:
-                        content = f"<h1>Fehler beim Lesen der Datei: {e}</h1>"
 
-                    # Platzhalter im HTML ersetzen
-                    for key, val in replacements.items():
-                        content = content.replace(f"{{{key}}}", str(val))
-                    
-                    self.wfile.write(content.encode('utf-8'))
+                    if self.path == '/pv':
+                        t_path = pv_web_instance.pv_template_path
+                    elif self.path == '/charge.html':
+                        t_path = pv_web_instance.charge_template_path
+                    elif self.path == '/heating-cooling.html':
+                        t_path = pv_web_instance.heating_template_path
+                    elif self.path == '/others.html':
+                        t_path = pv_web_instance.others_template_path
+                    else:
+                        t_path = pv_web_instance.template_path
+
+                    try:
+                        with open(t_path, 'rb') as f:
+                            self.wfile.write(f.read())
+                    except Exception as e:
+                        self.wfile.write(f"Fehler: {e}".encode('utf-8'))
                 else:
                     self.send_error(404)
             

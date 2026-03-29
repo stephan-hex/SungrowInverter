@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ladesteuerung</title>
+    <style>
+        body { font-family: Helvetica, Arial, sans-serif; padding: 20px; background: #121212; color: #e0e0e0; }
+        .container { max-width: 800px; margin: 0 auto; background: #1e1e1e; padding: 25px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+        h2 { border-bottom: 1px solid #333; padding-bottom: 10px; color: #ffffff; margin-top: 0; }
+        .section-title { font-size: 18px; text-transform: uppercase; letter-spacing: 1px; color: #bbb; text-align: center; }
+        
+        /* Schiebeschalter Styling */
+        .switch { position: relative; display: inline-block; width: 60px; height: 34px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #2ecc71; }
+        input:checked + .slider:before { transform: translateX(26px); }
+
+        .back-btn { display: block; width: 100%; padding: 15px; background: #34495e; color: white; border: none; border-radius: 6px; font-size: 16px; margin-top: 30px; cursor: pointer; text-align: center; text-decoration: none; font-weight: bold; transition: background 0.3s; }
+        .back-btn:hover { background: #2c3e50; }
+
+        .status-bar { position: fixed; bottom: 0; left: 0; width: 100%; background-color: #000000; color: #888; padding: 5px 20px; display: flex; justify-content: space-between; font-size: 12px; box-sizing: border-box; z-index: 100; border-top: 1px solid #333; }
+        .status-ok { color: #2ecc71; font-weight: bold; }
+        .status-error { color: #e74c3c; font-weight: bold; }
+        body { padding-bottom: 30px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Wallbox Ladesteuerung</h2>
+        
+        <div style="margin-top: 40px; padding: 30px; background: #252525; border-radius: 8px; border: 1px solid #333;">
+            <div class="section-title">Wallbox-Lademodus</div>
+            <div style="display: flex; justify-content: center; align-items: center; gap: 20px; margin-top: 25px;">
+                <span style="font-weight: bold; color: #ccc; font-size: 1.1rem;">Normal</span>
+                <label class="switch">
+                    <input type="checkbox" id="mode-toggle" onchange="toggleMode(this)">
+                    <span class="slider"></span>
+                </label>
+                <span style="font-weight: bold; color: #ccc; font-size: 1.1rem;">Intelligent</span>
+            </div>
+            <div style="margin-top:25px; text-align: center; color: #bbb;">
+                Aktueller Status: <span id="val_charge_mode" style="font-weight: bold; color: #fff;">Lade...</span>
+            </div>
+        </div>
+
+        <a href="/" class="back-btn">Zurück zur Hauptseite</a>
+    </div>
+
+    <div class="status-bar">
+        <span>Server: <span id="server-status" class="status-ok">OK</span></span>
+        <span>Letztes Update: <span id="val_timestamp">--:--:--</span></span>
+        <span id="live-clock">--:--:--</span>
+    </div>
+
+    <script>
+        async function fetchData() {
+            try {
+                const response = await fetch('/api');
+                const data = await response.json();
+                document.getElementById('server-status').className = 'status-ok';
+                document.getElementById('server-status').textContent = 'OK';
+                
+                document.getElementById('val_timestamp').textContent = data.timestamp;
+                document.getElementById('val_charge_mode').textContent = data.charge_mode;
+                
+                const toggleEl = document.getElementById('mode-toggle');
+                if (toggleEl) {
+                    toggleEl.checked = (data.charge_mode === 'INTELLIGENT-CHARGING');
+                }
+            } catch (e) {
+                document.getElementById('server-status').className = 'status-error';
+                document.getElementById('server-status').textContent = 'Fehler';
+            }
+        }
+
+        function toggleMode(checkbox) {
+            const isIntelligent = checkbox.checked;
+            const command = isIntelligent ? 'mode_surplus' : 'mode_normal';
+            
+            // Sofortiges UI-Feedback
+            document.getElementById('val_charge_mode').textContent = isIntelligent ? 'INTELLIGENT-CHARGING' : 'NORMAL-CHARGING';
+
+            fetch('/action', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({command: command})
+            }).catch(e => console.error("Aktion fehlgeschlagen", e));
+        }
+
+        setInterval(fetchData, 5000);
+        fetchData(); // Sofortiger Aufruf beim Laden
+        setInterval(() => { document.getElementById('live-clock').textContent = new Date().toLocaleTimeString('de-DE'); }, 1000);
+        document.getElementById('live-clock').textContent = new Date().toLocaleTimeString('de-DE');
+    </script>
+</body>
+</html>

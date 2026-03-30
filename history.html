@@ -78,7 +78,6 @@
     </div>
 
     <div class="status-bar">
-        <span>Server: <span id="server-status" class="status-ok">OK</span></span>
         <span>Letztes Update System: <span id="val_timestamp">{timestamp}</span></span>
         <span id="live-clock">--:--:--</span>
     </div>
@@ -122,25 +121,17 @@
         updateClock();
 
         async function checkServerStatus() {
-            const serverStatusEl = document.getElementById('server-status');
             const timestampEl = document.getElementById('val_timestamp');
             try {
                 const response = await fetch('/api');
                 if (!response.ok) throw new Error('Server not OK');
                 const data = await response.json();
 
-                if (serverStatusEl) {
-                    serverStatusEl.textContent = 'OK';
-                    serverStatusEl.className = 'status-ok';
-                }
                 if (timestampEl && data.timestamp) {
                     timestampEl.textContent = data.timestamp;
                 }
             } catch (e) {
-                if (serverStatusEl) {
-                    serverStatusEl.textContent = 'Fehler';
-                    serverStatusEl.className = 'status-error';
-                }
+                console.error("Status-Check fehlgeschlagen", e);
             }
         }
 
@@ -156,16 +147,8 @@
             const dateStr = `${year}-${month}-${day}`;
             const colsStr = selectedCols.join(',');
 
-            const serverStatusEl = document.getElementById('server-status');
-
             fetch(`/api/history?date=${dateStr}&cols=${colsStr}`)
-            .then(function(r) { 
-                if (r.ok && serverStatusEl) {
-                    serverStatusEl.textContent = "OK";
-                    serverStatusEl.className = "status-ok";
-                }
-                return r.json(); 
-            })
+            .then(r => r.json())
             .then(function(data) {
                 if (chartInstance) {
                     chartInstance.destroy();
@@ -244,7 +227,6 @@
                 });
             })
             .catch(function(e) {
-                if (serverStatusEl) { serverStatusEl.textContent = "Fehler"; serverStatusEl.className = "status-error"; }
                 console.error(e);
             });
         }

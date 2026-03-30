@@ -5,9 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Leistungsverlauf - Sungrow</title>
     <style>
-        body { font-family: Helvetica, Arial, sans-serif; padding: 20px; background: #121212; color: #e0e0e0; }
-        .container { max-width: 800px; margin: 0 auto; background: #1e1e1e; padding: 25px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+        body { font-family: Helvetica, Arial, sans-serif; padding: 10px; background: #121212; color: #e0e0e0; margin: 0; }
+        .container { max-width: 800px; margin: 0 auto; background: #1e1e1e; padding: 15px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); box-sizing: border-box; }
         h2 { border-bottom: 1px solid #333; padding-bottom: 10px; color: #ffffff; margin-top: 0; }
+        .header-nav { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            border-bottom: 1px solid #333; 
+            padding-bottom: 10px; 
+            margin-bottom: 20px; 
+            flex-wrap: wrap; 
+            gap: 15px; 
+        }
         .nav-btn { background: #34495e; border: none; color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; transition: background 0.3s;}
         .nav-btn:hover { background: #2c3e50; }
         .back-btn { display: block; width: 100%; padding: 15px; background: #34495e; color: white; border: none; border-radius: 6px; font-size: 16px; margin-top: 30px; cursor: pointer; }
@@ -33,12 +43,17 @@
         }
         .status-ok { color: #2ecc71; font-weight: bold; }
         .status-error { color: #e74c3c; font-weight: bold; }
-        body { padding-bottom: 30px; }
+        body { padding-bottom: 40px; }
+        .chart-container { position: relative; height: 600px; width: 100%; }
+        @media (max-width: 600px) {
+            .chart-container { height: 350px; }
+            h2 { font-size: 1.2rem; }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 20px;">
+        <div class="header-nav">
             <h2 style="border: none; margin: 0; padding: 0; color: #fff;">DC-Leistungsverlauf</h2>
             <div style="display: flex; gap: 10px; align-items: center;">
                 <button class="nav-btn" onclick="changeDate(-1)">&#9664;</button>
@@ -54,7 +69,7 @@
             <label class="checkbox-label"><input type="checkbox" class="dataset-cb" value="meter_active_power"> Netzleistung (Active)</label>
         </div>
 
-        <div style="position: relative; height: 600px; width: 100%;">
+        <div class="chart-container">
             <canvas id="powerChart"></canvas>
         </div>
 

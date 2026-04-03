@@ -19,7 +19,7 @@ class FritzControl:
         try:
             base_url = f"http://{self.config['fritz_ip']}/login_sid.lua"
             # Aktuellen Status prüfen
-            with urllib.request.urlopen(base_url, timeout=3) as r:
+            with urllib.request.urlopen(base_url, timeout=10) as r:
                 root = ET.fromstring(r.read())
             
             challenge = root.findtext("Challenge")
@@ -40,7 +40,7 @@ class FritzControl:
                 "response": response
             })
             
-            with urllib.request.urlopen(f"{base_url}?{params}", timeout=3) as r:
+            with urllib.request.urlopen(f"{base_url}?{params}", timeout=10) as r:
                 root = ET.fromstring(r.read())
                 self.sid = root.findtext("SID")
             
@@ -59,7 +59,7 @@ class FritzControl:
             ain = ain.replace(" ", "")
             cmd = "setswitchon" if on else "setswitchoff"
             params = urllib.parse.urlencode({"ain": ain, "switchcmd": cmd, "sid": sid})
-            url = f"http://{self.config['fritz_ip']}/webservices/homeautoswitch.lua?{params}"
+            url = f"http://{self.config['fritz_ip']}/webservices/homeautoswitch.lua?{params}" # timeout=10
             with urllib.request.urlopen(url, timeout=3) as r:
                 r.read() # AHA liefert den neuen Zustand zurück
             return True
@@ -76,7 +76,7 @@ class FritzControl:
             ain = ain.replace(" ", "")
             params = urllib.parse.urlencode({"ain": ain, "switchcmd": "getswitchstate", "sid": sid})
             url = f"http://{self.config['fritz_ip']}/webservices/homeautoswitch.lua?{params}"
-            with urllib.request.urlopen(url, timeout=2) as r:
+            with urllib.request.urlopen(url, timeout=10) as r:
                 return r.read().decode("utf-8").strip()
         except:
             self.sid = "0000000000000000"

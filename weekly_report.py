@@ -105,6 +105,20 @@ def generate_report():
     try:
         # Timeout hinzufügen, falls die DB gerade vom Hauptskript beschrieben wird
         conn = sqlite3.connect(DB_PATH, timeout=10)
+
+        # Vollständiges Backup der Datenbank erstellen
+        backup_filename = f"pv_db_backup_cw{iso_week}_{iso_year}.db"
+        backup_path = os.path.join(os.path.dirname(__file__), backup_filename)
+        backup_exists = os.path.exists(backup_path)
+        
+        try:
+            with sqlite3.connect(backup_path) as backup_conn:
+                conn.backup(backup_conn)
+            status_msg = "aktualisiert" if backup_exists else "erstellt"
+            report_lines.append(f"Datenbank-Backup {status_msg}: {backup_filename}")
+            report_lines.append("-" * 60)
+        except Exception as backup_err:
+            print(f"Fehler beim Erstellen des Backups: {backup_err}")
         
         # Iteriere über alle 7 Tage der Woche
         for i in range(7):

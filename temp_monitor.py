@@ -10,8 +10,10 @@ import xml.etree.ElementTree as ET
 
 # --- PV-Monitor Konfiguration ---
 API_URL             = "http://localhost:8080/api"
+#API_URL             = "http://192.168.178.58:8080/api"
+
 READ_INTERVAL_S     = 60   # Lesezyklus in Sekunden
-WATCHDOG_INTERVAL_S = 600  # Zustandsüberprüfung alle 10 Minuten
+WATCHDOG_INTERVAL_S = 300  # Zustandsüberprüfung alle 5 Minuten
 LOG_MAX_BYTES       = 100 * 1024  # 100 kByte
 
 # --- Fritz!Box Konfiguration aus JSON laden ---
@@ -64,41 +66,50 @@ def _log_error(soll: str, ist: str, detail: str = ""):
 
 def _fritz_get_sid():
     base = f"http://{FRITZ_IP}/login_sid.lua"
-    with urllib.request.urlopen(base, timeout=5) as r:
+    # Challenge für Login holen
+    with urllib.request.urlopen(base, timeout=10) as r:
         root = ET.fromstring(r.read())
-    sid       = root.findtext("SID")
     challenge = root.findtext("Challenge")
-    if sid and sid != "0000000000000000":
-        return sid
     response_str = f"{challenge}-{FRITZ_PASSWORD}"
     md5 = hashlib.md5(response_str.encode("utf-16-le")).hexdigest()
     params = urllib.parse.urlencode({"username": FRITZ_USER, "response": f"{challenge}-{md5}"})
-    with urllib.request.urlopen(f"{base}?{params}", timeout=5) as r:
+    with urllib.request.urlopen(f"{base}?{params}", timeout=10) as r:
         root = ET.fromstring(r.read())
     sid = root.findtext("SID")
     if not sid or sid == "0000000000000000":
         raise RuntimeError("Fritz!Box Login fehlgeschlagen - Passwort pruefen.")
+    print(f"[Fritz] Neue Session ID erstellt: {sid[:4]}...")
     return sid
 
 
 def _fritz_get_state() -> str:
     """Gibt '1', '0', 'inval' oder leeren String zurück."""
     global _fritz_sid
-    if not _fritz_sid:
-        _fritz_sid = _fritz_get_sid()
-    params = urllib.parse.urlencode({"ain": FRITZ_AIN, "switchcmd": "getswitchstate", "sid": _fritz_sid})
-    with urllib.request.urlopen(f"http://{FRITZ_IP}/webservices/homeautoswitch.lua?{params}", timeout=5) as r:
-        return r.read().decode("utf-8").strip()
+    try:
+        if not _fritz_sid:
+            _fritz_sid = _fritz_get_sid()
+        params = urllib.parse.urlencode({"ain": FRITZ_AIN, "switchcmd": "getswitchstate", "sid": _fritz_sid})
+        with urllib.request.urlopen(f"http://{FRITZ_IP}/webservices/homeautoswitch.lua?{params}", timeout=10) as r:
+            return r.read().decode("utf-8").strip()
+    except Exception as e:
+        print(f"FEHLER Fritz!Box get_state: {e}")
+        _fritz_sid = None
+        return "inval"
 
 
 def _fritz_is_present() -> bool:
     """Prüft ob die DECT-Steckdose erreichbar/registriert ist (getswitchpresent)."""
     global _fritz_sid
-    if not _fritz_sid:
-        _fritz_sid = _fritz_get_sid()
-    params = urllib.parse.urlencode({"ain": FRITZ_AIN, "switchcmd": "getswitchpresent", "sid": _fritz_sid})
-    with urllib.request.urlopen(f"http://{FRITZ_IP}/webservices/homeautoswitch.lua?{params}", timeout=5) as r:
-        return r.read().decode("utf-8").strip() == "1"
+    try:
+        if not _fritz_sid:
+            _fritz_sid = _fritz_get_sid()
+        params = urllib.parse.urlencode({"ain": FRITZ_AIN, "switchcmd": "getswitchpresent", "sid": _fritz_sid})
+        with urllib.request.urlopen(f"http://{FRITZ_IP}/webservices/homeautoswitch.lua?{params}", timeout=10) as r:
+            return r.read().decode("utf-8").strip() == "1"
+    except Exception as e:
+        print(f"FEHLER Fritz!Box is_present: {e}")
+        _fritz_sid = None
+        return False
 
 
 def _fritz_switch(on: bool) -> bool:
@@ -108,7 +119,7 @@ def _fritz_switch(on: bool) -> bool:
             _fritz_sid = _fritz_get_sid()
         cmd = "setswitchon" if on else "setswitchoff"
         params = urllib.parse.urlencode({"ain": FRITZ_AIN, "switchcmd": cmd, "sid": _fritz_sid})
-        with urllib.request.urlopen(f"http://{FRITZ_IP}/webservices/homeautoswitch.lua?{params}", timeout=5) as r:
+        with urllib.request.urlopen(f"http://{FRITZ_IP}/webservices/homeautoswitch.lua?{params}", timeout=10) as r:
             r.read()
         actual = _fritz_get_state()
         actual_str = "EIN" if actual == "1" else "AUS" if actual == "0" else actual

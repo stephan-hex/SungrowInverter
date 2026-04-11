@@ -15,8 +15,10 @@ class PV_Database:
         self.buffer = []
         self.lock = False # Einfacher Schutz, falls nötig, hier reicht aber meist die Thread-Sicherheit von Listen
         
-        # SQLite Verbindung aufbauen (check_same_thread=False erlaubt Zugriff aus verschiedenen Threads)
-        self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
+        # SQLite Verbindung aufbauen mit Timeout (5 Sek) für bessere Concurrency
+        self.conn = sqlite3.connect(self.db_path, check_same_thread=False, timeout=5)
+        # WAL-Modus aktivieren: Erlaubt gleichzeitiges Lesen und Schreiben
+        self.conn.execute("PRAGMA journal_mode=WAL;")
         self._create_table()
 
     def _create_table(self):

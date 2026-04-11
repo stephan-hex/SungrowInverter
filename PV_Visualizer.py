@@ -126,7 +126,7 @@ class PVVisualizer:
             return False
             
         try:
-            conn = sqlite3.connect(self.db_path)
+            conn = sqlite3.connect(self.db_path, timeout=5)
             cursor = conn.cursor()
             # Metadaten der Tabelle abrufen
             cursor.execute("PRAGMA table_info(readings)")
@@ -256,7 +256,7 @@ class PVVisualizer:
 
         # 3. Daten aus DB holen
         try:
-            conn = sqlite3.connect(self.db_path)
+            conn = sqlite3.connect(self.db_path, timeout=5)
             cursor = conn.cursor()
             
             # Debug: Anzahl der Werte prüfen

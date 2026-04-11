@@ -103,7 +103,8 @@ def generate_report():
     days_found = 0
 
     try:
-        conn = sqlite3.connect(DB_PATH)
+        # Timeout hinzufügen, falls die DB gerade vom Hauptskript beschrieben wird
+        conn = sqlite3.connect(DB_PATH, timeout=10)
         
         # Iteriere über alle 7 Tage der Woche
         for i in range(7):

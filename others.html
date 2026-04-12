@@ -70,6 +70,17 @@
 
         <div class="control-card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <span style="color: #bbb; font-weight: bold;">Außentemperatur gemessen</span>
+                <span id="val_zisterne_temp" style="font-weight: bold; font-size: 1.2em; color: #e74c3c;">-- °C</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #bbb; font-weight: bold;">Pegelstand Zisterne</span>
+                <span id="val_zisterne_level" style="font-weight: bold; font-size: 1.2em; color: #e74c3c;">-- %</span>
+            </div>
+        </div>
+
+        <div class="control-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <span style="color: #bbb; font-weight: bold;">Zisterne</span>
                 <label class="switch">
                     <input type="checkbox" id="switch_zisterne" onchange="handleToggle('zisterne', this)">
@@ -125,6 +136,21 @@
             try {
                 const response = await fetch('/api');
                 const data = await response.json();
+
+                // Sensor-Werte aktualisieren
+                const levelEl = document.getElementById('val_zisterne_level');
+                const tempEl = document.getElementById('val_zisterne_temp');
+                const isStale = data['zisterne_stale'];
+                const statusColor = isStale ? '#e74c3c' : '#2ecc71'; // Rot wenn alt, Grün wenn aktuell
+
+                if (levelEl) {
+                    levelEl.innerText = data['zisterne_level'] || '-- %';
+                    levelEl.style.color = statusColor;
+                }
+                if (tempEl) {
+                    tempEl.innerText = data['zisterne_temp'] || '-- °C';
+                    tempEl.style.color = statusColor;
+                }
 
                 // Schalter-Zustände synchronisieren (außer während der 15s Wartezeit)
                 const switches = ['zisterne', 'brunnen', 'reserve'];

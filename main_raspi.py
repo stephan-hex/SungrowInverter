@@ -8,6 +8,7 @@ import time
 import threading
 import signal
 import datetime
+from ESP32_Sensor_Reader import ESP32SensorReader
 from fritz_control import FritzControl
 
 # Metadaten
@@ -42,6 +43,11 @@ except:
 
 # Globaler Cache für Fritzbox-Zustände (wird vom Hintergrund-Thread befüllt)
 fritz_data_cache = {'fritz_zisterne': 'inval', 'fritz_brunnen': 'inval', 'fritz_reserve': 'inval'}
+
+# --- ESP32 Sensor Integration ---
+esp_reader = ESP32SensorReader()
+esp_data_cache = {'zisterne_temp': 'N/A', 'zisterne_dist': 'N/A', 'zisterne_level': 'N/A'}
+last_esp_update = 0
 
 # Register global laden
 REGISTERS = {}
@@ -211,6 +217,12 @@ def read_modbus_data_callback():
     # Fritz-Zustände aus dem Hintergrund-Cache in den Haupt-Cache mergen
     last_data_cache.update(fritz_data_cache)
     
+    # ESP32-Zustände mergen
+    last_data_cache.update(esp_data_cache)
+    
+    # Timeout check für Sensorik (5 Minuten = 300s)
+    last_data_cache['zisterne_stale'] = (time.time() - last_esp_update) > 300
+    
     return last_data_cache
 
 def fritz_poll_loop():
@@ -231,6 +243,22 @@ def fritz_poll_loop():
         
         # Die FritzBox braucht nicht jede Sekunde gefragt werden, 10s ist ein guter Kompromiss
         stop_event.wait(timeout=10)
+
+def esp32_poll_loop():
+    """Hintergrund-Thread für das ESP32-Polling."""
+    global last_esp_update
+    print("[ESP32Thread] Hintergrund-Polling gestartet.")
+    while running:
+        success = esp_reader.fetch_data()
+        if success:
+            # Werte in den Cache schreiben (formatiert für Anzeige)
+            last_esp_update = time.time()
+            esp_data_cache['zisterne_temp'] = f"{esp_reader.last_temp:.1f} °C"
+            esp_data_cache['zisterne_dist'] = f"{esp_reader.last_dist:.1f} cm"
+            esp_data_cache['zisterne_level'] = f"{esp_reader.last_percent:.1f} %"
+        
+        # Wartezeit aus der Reader-Konstante nehmen
+        stop_event.wait(timeout=esp_reader.POLL_INTERVAL)
 
 def get_cached_data():
     """Gibt den zuletzt gepollteten Datensatz zurück (kein Modbus-Zugriff)."""
@@ -316,6 +344,10 @@ def main():
     # Fritz-Polling-Thread starten
     fritz_thread = threading.Thread(target=fritz_poll_loop, daemon=True)
     fritz_thread.start()
+    
+    # ESP32-Thread starten
+    esp_thread = threading.Thread(target=esp32_poll_loop, daemon=True)
+    esp_thread.start()
     
     print(f"Programm läuft. Daten werden alle {POLL_INTERVAL}s abgerufen. Drücke STRG+C zum Beenden.")
     

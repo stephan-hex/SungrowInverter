@@ -47,7 +47,7 @@ fritz_data_cache = {'fritz_zisterne': 'inval', 'fritz_brunnen': 'inval', 'fritz_
 # --- ESP32 Sensor Integration ---
 esp_reader = ESP32SensorReader()
 esp_data_cache = {'zisterne_temp': 'N/A', 'zisterne_dist': 'N/A', 'zisterne_level': 'N/A'}
-last_esp_update = 0
+last_esp_update = time.time()  # Mit aktueller Zeit starten, um initiales Rot zu vermeiden
 
 # Register global laden
 REGISTERS = {}
@@ -249,15 +249,18 @@ def esp32_poll_loop():
     global last_esp_update
     print("[ESP32Thread] Hintergrund-Polling gestartet.")
     while running:
-        success = esp_reader.fetch_data()
-        if success:
-            # Werte in den Cache schreiben (formatiert für Anzeige)
-            last_esp_update = time.time()
-            esp_data_cache['zisterne_temp'] = f"{esp_reader.last_temp:.1f} °C"
-            esp_data_cache['zisterne_dist'] = f"{esp_reader.last_dist:.1f} cm"
-            esp_data_cache['zisterne_level'] = f"{esp_reader.last_percent:.1f} %"
-        
-        # Wartezeit aus der Reader-Konstante nehmen
+        try:
+            success = esp_reader.fetch_data()
+            if success:
+                # Zeitstempel nur bei echtem Erfolg aktualisieren
+                last_esp_update = time.time()
+                esp_data_cache['zisterne_temp'] = f"{esp_reader.last_temp:.1f} °C"
+                esp_data_cache['zisterne_dist'] = f"{esp_reader.last_dist:.1f} cm"
+                esp_data_cache['zisterne_level'] = f"{esp_reader.last_percent:.1f} %"
+        except Exception as e:
+            print(f"[ESP32Thread] Unerwarteter Fehler im Loop: {e}")
+
+        # Immer warten, auch wenn ein Fehler auftrat, um den Thread am Leben zu halten
         stop_event.wait(timeout=esp_reader.POLL_INTERVAL)
 
 def get_cached_data():

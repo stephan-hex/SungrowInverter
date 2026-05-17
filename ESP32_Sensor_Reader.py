@@ -90,7 +90,7 @@ class ESP32SensorReader:
                 print(f"  Füllstand:  {self.last_percent}%")
                 
                 return True
-        except (URLError, KeyError, json.JSONDecodeError) as e:
+        except Exception as e:
             print(f"[{time.strftime('%H:%M:%S')}] Fehler beim Abrufen der ESP-Daten: {e}")
             if self.last_percent is not None:
                 print(f"  -> Zeige letzten gültigen Wert: {self.last_percent}% (Temp: {self.last_temp}°C)")

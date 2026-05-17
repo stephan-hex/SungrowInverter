@@ -9,6 +9,7 @@ import threading
 import signal
 import datetime
 from ESP32_Sensor_Reader import ESP32SensorReader
+from RubbishCollection import RubbishCollection
 from fritz_control import FritzControl
 
 # Metadaten
@@ -48,6 +49,25 @@ fritz_data_cache = {'fritz_zisterne': 'inval', 'fritz_brunnen': 'inval', 'fritz_
 esp_reader = ESP32SensorReader()
 esp_data_cache = {'zisterne_temp': 'N/A', 'zisterne_dist': 'N/A', 'zisterne_level': 'N/A'}
 last_esp_update = time.time()  # Mit aktueller Zeit starten, um initiales Rot zu vermeiden
+
+# --- Rubbish Collection Integration ---
+rubbish_collector = RubbishCollection(os.path.join(os.path.dirname(__file__), "calendar.csv"))
+rubbish_data_cache = []
+
+def update_rubbish_data():
+    """Aktualisiert die Mülldaten im Cache für die nächsten 3 Tage"""
+    global rubbish_data_cache
+    dates = rubbish_collector.GetNextCollectionDates(3)
+    wd_map = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"]
+    rubbish_data_cache = []
+    for item in dates[:3]:
+        rubbish_data_cache.append({
+            'day': wd_map[item['date'].weekday()],
+            'category': item['category']
+        })
+
+update_rubbish_data() # Initialer Abruf beim Programmstart
+last_rubbish_update_day = datetime.datetime.now().day
 
 # Register global laden
 REGISTERS = {}
@@ -199,7 +219,14 @@ last_data_cache = {}
 
 def read_modbus_data_callback():
     """Wrapper für Poll-Loop: Holt Rohdaten, aktualisiert DB-Puffer und Cache."""
-    global last_data_cache
+    global last_data_cache, last_rubbish_update_day
+
+    # Täglich um 01:00 Uhr oder beim ersten Start aktualisieren
+    now = datetime.datetime.now()
+    if (now.hour >= 1 and now.day != last_rubbish_update_day):
+        update_rubbish_data()
+        last_rubbish_update_day = now.day
+
     raw = read_raw_modbus_data()
     
     # Daten für die Datenbank vorbereiten (sammeln)
@@ -207,7 +234,10 @@ def read_modbus_data_callback():
     current_time = time.time()
     pv_db.prepare_data(raw, current_time)
     
-    last_data_cache = format_data_for_ui(raw)
+    # Daten formatieren und in den globalen Cache MERGEN statt zu überschreiben
+    formatted_raw = format_data_for_ui(raw)
+    for k, v in formatted_raw.items():
+        last_data_cache[k] = v
     
     # Lade-Modus zur API hinzufügen
     last_data_cache['charge_mode'] = CHARGE_MODE
@@ -222,6 +252,9 @@ def read_modbus_data_callback():
     
     # Timeout check für Sensorik (5 Minuten = 300s)
     last_data_cache['zisterne_stale'] = (time.time() - last_esp_update) > 300
+    
+    # Mülldaten zum globalen Cache hinzufügen
+    last_data_cache['rubbish_data'] = rubbish_data_cache
     
     return last_data_cache
 

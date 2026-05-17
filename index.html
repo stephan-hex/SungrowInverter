@@ -57,6 +57,19 @@
         @keyframes drift { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(5px); } }
         @keyframes rain { 0% { opacity: 0; transform: translateY(0); } 50% { opacity: 1; } 100% { opacity: 0; transform: translateY(10px); } }
         @keyframes pulse-icon { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.1);opacity:0.7} }
+        
+        .rubbish-widget {
+            text-align: center; margin: 10px 0; padding: 15px; background: #252525;
+            border-radius: 15px; width: 80%; box-shadow: 0 4px 6px var(--btn-shadow);
+            color: #ffffff;
+        }
+        .rubbish-item {
+            display: flex; justify-content: space-between; padding: 5px 10px;
+            border-bottom: 1px solid #333; font-size: 0.95rem;
+        }
+        .rubbish-item:last-child { border-bottom: none; }
+        .rubbish-day { font-weight: bold; color: var(--accent-color); }
+
         .weather-temp { font-size: 2.5rem; font-weight: bold; }
 
         .button-grid {
@@ -116,6 +129,13 @@
             <div>Bad Boll</div>
             <div class="weather-temp" id="weather-temp">--°C</div>
             <div id="weather-desc">Lade Wetter...</div>
+        </div>
+
+        <div class="rubbish-widget" id="rubbish-widget">
+            <div class="section-title" style="font-size: 0.9rem; margin-bottom: 10px;">Abfuhrtermine</div>
+            <div id="rubbish-list" style="display: flex; flex-direction: column; gap: 5px;">
+                <div style="font-size: 0.8rem; color: #666;">Suche Termine...</div>
+            </div>
         </div>
 
         <div class="button-grid">
@@ -182,6 +202,23 @@
                 document.getElementById('server-status').textContent = 'Verbunden';
                 document.getElementById('server-status').className = 'status-ok';
                 document.getElementById('val_timestamp').textContent = data.timestamp;
+
+                // Mülldaten verarbeiten
+                const rubbishWidget = document.getElementById('rubbish-widget');
+                const rubbishList = document.getElementById('rubbish-list');
+                if (data.rubbish_data && data.rubbish_data.length > 0) {
+                    rubbishWidget.style.display = 'block';
+                    rubbishList.innerHTML = '';
+                    data.rubbish_data.forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = 'rubbish-item';
+                        div.innerHTML = `<span class="rubbish-day">${item.day}</span><span>${item.category}</span>`;
+                        rubbishList.appendChild(div);
+                    });
+                } else {
+                    // Nur ausblenden, wenn die API explizit leere Daten liefert
+                    if (data.rubbish_data) rubbishWidget.style.display = 'none';
+                }
             } catch (e) {
                 document.getElementById('server-status').textContent = 'Fehler';
                 document.getElementById('server-status').className = 'status-error';

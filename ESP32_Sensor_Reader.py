@@ -99,4 +99,5 @@ class ESP32SensorReader:
 if __name__ == "__main__":
     # Einfacher Funktionstest bei direktem Aufruf
     reader = ESP32SensorReader()
+    
     reader.fetch_data()

@@ -355,7 +355,14 @@ def main():
         while running:
             # Regelmäßiges Abfragen der Daten (ersetzt den UI-Loop)
             # Der Aufruf füllt den Puffer der Datenbankklasse
-            read_modbus_data_callback()
+            data = read_modbus_data_callback()
+            
+            # Zyklische Status-Ausgabe in der Konsole (alle 5s)
+            ts = datetime.datetime.now().strftime("%H:%M:%S")
+            p_pv = data.get('total_dc_power', '0 W')
+            zist = data.get('zisterne_level', 'N/A')
+            print(f"[{ts}] Status -> PV-Leistung: {p_pv:12} | Zisterne: {zist}")
+            
             stop_event.wait(timeout=POLL_INTERVAL)  # unterbrechbarer Sleep
             stop_event.clear()
             

@@ -329,22 +329,34 @@ def esp32_poll_loop():
 def homematic_poll_loop():
     """Hintergrund-Thread für Homematic-Abfragen."""
     global homematic_data_cache, homematic_error_cache
-    print("[HomematicThread] Hintergrund-Polling gestartet (Lazy Mode).")
+    print("[HomematicThread] Hintergrund-Polling gestartet (Hybrid Mode).")
+    
+    # Erster Abruf beim Start, damit der Cache sofort gefüllt ist
+    if hm_checker:
+        data = hm_checker.fetch_status(HOMEMATIC_CONFIG)
+        homematic_error_cache = hm_checker.last_error
+        if data:
+            homematic_data_cache = data
+
     while running:
-        # Nur abfragen, wenn in den letzten 60 Sekunden Bedarf gemeldet wurde
-        if time.time() - last_hm_request_time < 60:
-            if hm_checker:
-                data = hm_checker.fetch_status(HOMEMATIC_CONFIG)
-                homematic_error_cache = hm_checker.last_error
-                if data:
-                    homematic_data_cache = data
-            stop_event.wait(timeout=30)
-        else:
-            # Idle: Warte auf Event (neue Web-Anfrage) oder Programm-Ende
-            if stop_event.wait(timeout=2):
-                break
-            if hm_request_event.is_set():
-                hm_request_event.clear()
+        # Bestimme das Intervall: 30s wenn die Seite aktiv ist (< 60s seit letztem Request), sonst 300s
+        is_active = (time.time() - last_hm_request_time < 60)
+        wait_time = 30 if is_active else 300
+        
+        # Warte auf das nächste Intervall ODER auf ein Signal vom Webserver (hm_request_event)
+        # hm_request_event.wait(timeout) kehrt True zurück, wenn das Event gesetzt wurde
+        triggered = hm_request_event.wait(timeout=wait_time)
+        
+        if not running:
+            break
+            
+        if hm_checker:
+            data = hm_checker.fetch_status(HOMEMATIC_CONFIG)
+            homematic_error_cache = hm_checker.last_error
+            if data:
+                homematic_data_cache = data
+        
+        hm_request_event.clear()
 
 def homematic_temp_loop():
     """Hintergrund-Thread für Temperatur-Polling (alle 5 Minuten)."""

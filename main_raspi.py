@@ -11,6 +11,7 @@ import datetime
 from ESP32_Sensor_Reader import ESP32SensorReader
 from RubbishCollection import RubbishCollection
 from fritz_control import FritzControl
+from homematic_device_monitor import HomematicStatusChecker
 
 # Metadaten
 APP_NAME = "Sungrow Inverter Monitor (Headless)"
@@ -44,6 +45,22 @@ except:
 
 # Globaler Cache für Fritzbox-Zustände (wird vom Hintergrund-Thread befüllt)
 fritz_data_cache = {'fritz_zisterne': 'inval', 'fritz_brunnen': 'inval', 'fritz_reserve': 'inval'}
+
+# --- Homematic Integration ---
+try:
+    HOMEMATIC_CONFIG = os.path.join(os.path.dirname(__file__), "homematic_device_config.json")
+    _ccu_creds_path = os.path.join(os.path.dirname(__file__), "CCU_credentials.json")
+    with open(_ccu_creds_path, "r", encoding="utf-8") as f:
+        CCU_CREDS = json.load(f)
+    hm_checker = HomematicStatusChecker(CCU_CREDS["ccu_ip"], CCU_CREDS["user"], CCU_CREDS["password"])
+except Exception as e:
+    print(f"Fehler bei Homematic Init: {e}")
+    hm_checker = None
+
+homematic_data_cache = []
+homematic_error_cache = None
+last_hm_request_time = 0
+hm_request_event = threading.Event()
 
 # --- ESP32 Sensor Integration ---
 esp_reader = ESP32SensorReader()
@@ -256,6 +273,10 @@ def read_modbus_data_callback():
     # Mülldaten zum globalen Cache hinzufügen
     last_data_cache['rubbish_data'] = rubbish_data_cache
     
+    # Homematic Daten hinzufügen
+    last_data_cache['homematic_data'] = homematic_data_cache
+    last_data_cache['homematic_error'] = homematic_error_cache
+    
     return last_data_cache
 
 def fritz_poll_loop():
@@ -296,8 +317,33 @@ def esp32_poll_loop():
         # Immer warten, auch wenn ein Fehler auftrat, um den Thread am Leben zu halten
         stop_event.wait(timeout=esp_reader.POLL_INTERVAL)
 
-def get_cached_data():
+def homematic_poll_loop():
+    """Hintergrund-Thread für Homematic-Abfragen."""
+    global homematic_data_cache, homematic_error_cache
+    print("[HomematicThread] Hintergrund-Polling gestartet (Lazy Mode).")
+    while running:
+        # Nur abfragen, wenn in den letzten 60 Sekunden Bedarf gemeldet wurde
+        if time.time() - last_hm_request_time < 60:
+            if hm_checker:
+                data = hm_checker.fetch_status(HOMEMATIC_CONFIG)
+                homematic_error_cache = hm_checker.last_error
+                if data:
+                    homematic_data_cache = data
+            stop_event.wait(timeout=30)
+        else:
+            # Idle: Warte auf Event (neue Web-Anfrage) oder Programm-Ende
+            if stop_event.wait(timeout=2):
+                break
+            if hm_request_event.is_set():
+                hm_request_event.clear()
+
+def get_cached_data(params=None):
     """Gibt den zuletzt gepollteten Datensatz zurück (kein Modbus-Zugriff)."""
+    if params and params.get('source') == ['windows']:
+        global last_hm_request_time
+        last_hm_request_time = time.time()
+        hm_request_event.set()
+        
     if last_data_cache:
         return last_data_cache
     return read_modbus_data_callback()
@@ -384,6 +430,10 @@ def main():
     # ESP32-Thread starten
     esp_thread = threading.Thread(target=esp32_poll_loop, daemon=True)
     esp_thread.start()
+    
+    # Homematic-Thread starten
+    hm_thread = threading.Thread(target=homematic_poll_loop, daemon=True)
+    hm_thread.start()
     
     print(f"Programm läuft. Daten werden alle {POLL_INTERVAL}s abgerufen. Drücke STRG+C zum Beenden.")
     

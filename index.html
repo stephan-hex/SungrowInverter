@@ -107,7 +107,6 @@
     <div class="hub-container">
         <div class="date-display">
             <h1 id="current-date">--. --. ----</h1>
-            <h2 id="current-weekday">Montag</h2>
         </div>
 
         <div class="clock-container">
@@ -141,7 +140,7 @@
         <div class="button-grid">
             <a href="/pv" class="nav-button">PV</a>
             <a href="/charge.html" class="nav-button">Laden</a>
-            <a href="/heating-cooling.html" class="nav-button">Heizen-Kühlen</a>
+            <a href="/windows.html" class="nav-button">Fenster</a>
             <a href="/others.html" class="nav-button">Sonstiges</a>
         </div>
 
@@ -156,9 +155,7 @@
         function updateDate() {
             const now = new Date();
             const dateOptions = { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Europe/Berlin' };
-            const weekdayOptions = { weekday: 'long', timeZone: 'Europe/Berlin' };
             document.getElementById('current-date').textContent = now.toLocaleDateString('de-DE', dateOptions);
-            document.getElementById('current-weekday').textContent = now.toLocaleDateString('de-DE', weekdayOptions);
         }
 
         function createClockMarks() {

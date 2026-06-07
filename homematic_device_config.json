@@ -1,0 +1,524 @@
+{
+  "devices": [
+    {
+      "name": "Außen-Temp",
+      "address": "12345678901234",
+      "interface": "HmIP-RF",
+      "datapoints": [
+        {
+          "channel": 0,
+          "name": "LOW_BAT",
+          "type": "bool"
+        },
+        {
+          "channel": 1,
+          "name": "ACTUAL_TEMPERATURE",
+          "type": "float"
+        },
+        {
+          "channel": 1,
+          "name": "HUMIDITY",
+          "type": "int"
+        }
+      ]
+    },
+    {
+      "name": "Bad",
+      "address": "12345678901234",
+      "interface": "HmIP-RF",
+      "datapoints": [
+        {
+          "channel": 0,
+          "name": "LOW_BAT",
+          "type": "bool"
+        },
+        {
+          "channel": 1,
+          "name": "ACTUAL_TEMPERATURE",
+          "type": "float"
+        }
+      ]
+    },
+    {
+      "name": "Anne",
+      "address": "12345678901234",
+      "interface": "HmIP-RF",
+      "datapoints": [
+        {
+          "channel": 3,
+          "name": "LEVEL",
+          "type": "float"
+        },
+        {
+          "channel": 3,
+          "name": "LEVEL_2",
+          "type": "float"
+        }
+      ]
+    },
+    {
+      "name": "Lars",
+      "address": "12345678901234",
+      "interface": "HmIP-RF",
+      "datapoints": [
+        {
+          "channel": 3,
+          "name": "LEVEL",
+          "type": "float"
+        },
+        {
+          "channel": 3,
+          "name": "LEVEL_2",
+          "type": "float"
+        }
+      ]
+    },
+    {
+      "name": "Wohnen 2er",
+      "address": "12345678901234",
+      "interface": "HmIP-RF",
+      "datapoints": [
+        {
+          "channel": 3,
+          "name": "LEVEL",
+          "type": "float"
+        },
+        {
+          "channel": 3,
+          "name": "LEVEL_2",
+          "type": "float"
+        }
+      ]
+    },
+    {
+      "name": "Wohnen 4er",
+      "address": "12345678901234",
+      "interface": "HmIP-RF",
+      "datapoints": [
+        {
+          "channel": 3,
+          "name": "LEVEL",
+          "type": "float"
+        },
+        {
+          "channel": 3,
+          "name": "LEVEL_2",
+          "type": "float"
+        }
+      ]
+    },
+    {
+      "name": "Kino",
+      "address": "12345678901234",
+      "interface": "HmIP-RF",
+      "datapoints": [
+        {
+          "channel": 0,
+          "name": "LOW_BAT",
+          "type": "bool"
+        },
+        {
+          "channel": 1,
+          "name": "STATE",
+          "type": "int"
+        }
+      ]
+    },
+    {
+      "name": "Anne",
+      "address": "12345678901234",
+      "interface": "HmIP-RF",
+      "datapoints": [
+        {
+          "channel": 0,
+          "name": "LOW_BAT",
+          "type": "bool"
+        },
+        {
+          "channel": 1,
+          "name": "STATE",
+          "type": "int"
+        }
+      ]
+    },
+    {
+      "name": "Büro",
+      "address": "12345678901234",
+      "interface": "HmIP-RF",
+      "datapoints": [
+        {
+          "channel": 0,
+          "name": "LOW_BAT",
+          "type": "bool"
+        },
+        {
+          "channel": 1,
+          "name": "STATE",
+          "type": "int"
+        }
+      ]
+    },
+    {
+      "name": "Gäste-WC",
+      "address": "12345678901234",
+      "interface": "HmIP-RF",
+      "datapoints": [
+        {
+          "channel": 0,
+          "name": "LOW_BAT",
+          "type": "bool"
+        },
+        {
+          "channel": 1,
+          "name": "STATE",
+          "type": "int"
+        }
+      ]
+    },
+    {
+      "name": "Hütte",
+      "address": "12345678901234",
+      "interface": "HmIP-RF",
+      "datapoints": [
+        {
+          "channel": 0,
+          "name": "LOW_BAT",
+          "type": "bool"
+        },
+        {
+          "channel": 1,
+          "name": "STATE",
+          "type": "int"
+        }
+      ]
+    },
+    {
+      "name": "Küche",
+      "address": "12345678901234",
+      "interface": "HmIP-RF",
+      "datapoints": [
+        {
+          "channel": 0,
+          "name": "LOW_BAT",
+          "type": "bool"
+        },
+        {
+          "channel": 1,
+          "name": "STATE",
+          "type": "int"
+        }
+      ]
+    },
+    {
+      "name": "Lars-Süd",
+      "address": "12345678901234",
+      "interface": "HmIP-RF",
+      "datapoints": [
+        {
+          "channel": 0,
+          "name": "LOW_BAT",
+          "type": "bool"
+        },
+        {
+          "channel": 1,
+          "name": "STATE",
+          "type": "int"
+        }
+      ]
+    },
+    {
+      "name": "Schlafen",
+      "address": "12345678901234",
+      "interface": "HmIP-RF",
+      "datapoints": [
+        {
+          "channel": 0,
+          "name": "LOW_BAT",
+          "type": "bool"
+        },
+        {
+          "channel": 1,
+          "name": "STATE",
+          "type": "int"
+        }
+      ]
+    },
+    {
+      "name": "Wohnen-Süd",
+      "address": "12345678901234",
+      "interface": "HmIP-RF",
+      "datapoints": [
+        {
+          "channel": 0,
+          "name": "LOW_BAT",
+          "type": "bool"
+        },
+        {
+          "channel": 1,
+          "name": "STATE",
+          "type": "int"
+        }
+      ]
+    },
+    {
+      "name": "Wohnen-2er",
+      "address": "12345678901234",
+      "interface": "HmIP-RF",
+      "datapoints": [
+        {
+          "channel": 0,
+          "name": "LOW_BAT",
+          "type": "bool"
+        },
+        {
+          "channel": 1,
+          "name": "STATE",
+          "type": "int"
+        }
+      ]
+    },
+    {
+      "name": "Wohnen-4er",
+      "address": "12345678901234",
+      "interface": "HmIP-RF",
+      "datapoints": [
+        {
+          "channel": 0,
+          "name": "LOW_BAT",
+          "type": "bool"
+        },
+        {
+          "channel": 1,
+          "name": "STATE",
+          "type": "int"
+        }
+      ]
+    },
+    {
+      "name": "RAUCHMELDER_ARBEITSZIMMER",
+      "address": "12345678901234",
+      "interface": "HmIP-RF",
+      "datapoints": [
+        {
+          "channel": 0,
+          "name": "LOW_BAT",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "RAUCHMELDER_EG1",
+      "address": "12345678901234",
+      "interface": "HmIP-RF",
+      "datapoints": [
+        {
+          "channel": 0,
+          "name": "LOW_BAT",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "RAUCHMELDER_UG1",
+      "address": "12345678901234",
+      "interface": "HmIP-RF",
+      "datapoints": [
+        {
+          "channel": 0,
+          "name": "LOW_BAT",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "Schlafen",
+      "address": "12345678901234",
+      "interface": "HmIP-RF",
+      "datapoints": [
+        {
+          "channel": 0,
+          "name": "LOW_BAT",
+          "type": "bool"
+        },
+        {
+          "channel": 1,
+          "name": "ACTUAL_TEMPERATURE",
+          "type": "float"
+        }
+      ]
+    },
+    {
+      "name": "SONNE_WESTEN",
+      "address": "12345678901234",
+      "interface": "HmIP-RF",
+      "datapoints": [
+        {
+          "channel": 0,
+          "name": "LOW_BAT",
+          "type": "bool"
+        },
+        {
+          "channel": 1,
+          "name": "AVERAGE_ILLUMINATION",
+          "type": "float"
+        },
+        {
+          "channel": 1,
+          "name": "CURRENT_ILLUMINATION",
+          "type": "float"
+        }
+      ]
+    },
+    {
+      "name": "THERMOMETER_HUETTE",
+      "address": "12345678901234",
+      "interface": "HmIP-RF",
+      "datapoints": [
+        {
+          "channel": 0,
+          "name": "LOW_BAT",
+          "type": "bool"
+        },
+        {
+          "channel": 1,
+          "name": "ACTUAL_TEMPERATURE",
+          "type": "float"
+        }
+      ]
+    },
+    {
+      "name": "THERMOMETER_KELLER",
+      "address": "12345678901234",
+      "interface": "HmIP-RF",
+      "datapoints": [
+        {
+          "channel": 0,
+          "name": "LOW_BAT",
+          "type": "bool"
+        },
+        {
+          "channel": 1,
+          "name": "ACTUAL_TEMPERATURE",
+          "type": "float"
+        },
+        {
+          "channel": 1,
+          "name": "HUMIDITY",
+          "type": "int"
+        }
+      ]
+    },
+    {
+      "name": "THERMOMETER_WOHNEN",
+      "address": "12345678901234",
+      "interface": "HmIP-RF",
+      "datapoints": [
+        {
+          "channel": 0,
+          "name": "LOW_BAT",
+          "type": "bool"
+        },
+        {
+          "channel": 1,
+          "name": "ACTUAL_TEMPERATURE",
+          "type": "float"
+        },
+        {
+          "channel": 1,
+          "name": "HUMIDITY",
+          "type": "int"
+        }
+      ]
+    },
+    {
+      "name": "THERMOSTAT_ANNE",
+      "address": "12345678901234",
+      "interface": "HmIP-RF",
+      "datapoints": [
+        {
+          "channel": 0,
+          "name": "LOW_BAT",
+          "type": "bool"
+        },
+        {
+          "channel": 1,
+          "name": "ACTUAL_TEMPERATURE",
+          "type": "float"
+        }
+      ]
+    },
+    {
+      "name": "THERMOSTAT_BUERO",
+      "address": "12345678901234",
+      "interface": "HmIP-RF",
+      "datapoints": [
+        {
+          "channel": 0,
+          "name": "LOW_BAT",
+          "type": "bool"
+        },
+        {
+          "channel": 1,
+          "name": "ACTUAL_TEMPERATURE",
+          "type": "float"
+        }
+      ]
+    },
+    {
+      "name": "THERMOSTAT_KUECHE",
+      "address": "12345678901234",
+      "interface": "HmIP-RF",
+      "datapoints": [
+        {
+          "channel": 0,
+          "name": "LOW_BAT",
+          "type": "bool"
+        },
+        {
+          "channel": 1,
+          "name": "ACTUAL_TEMPERATURE",
+          "type": "float"
+        }
+      ]
+    },
+    {
+      "name": "WASSERSENSOR_HEIZRAUM",
+      "address": "12345678901234",
+      "interface": "HmIP-RF",
+      "datapoints": [
+        {
+          "channel": 0,
+          "name": "LOW_BAT",
+          "type": "bool"
+        },
+        {
+          "channel": 1,
+          "name": "ALARMSTATE",
+          "type": "bool"
+        },
+        {
+          "channel": 1,
+          "name": "WATERLEVEL_DETECTED",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "Gäste-WC",
+      "address": "12345678901234",
+      "interface": "HmIP-RF",
+      "datapoints": [
+        {
+          "channel": 0,
+          "name": "LOW_BAT",
+          "type": "bool"
+        },
+        {
+          "channel": 1,
+          "name": "ACTUAL_TEMPERATURE",
+          "type": "float"
+        }
+      ]
+    }
+  ]
+}

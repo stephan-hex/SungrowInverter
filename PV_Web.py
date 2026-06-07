@@ -21,6 +21,7 @@ class PV_Web:
         self.pv_template_path = os.path.join(os.path.dirname(__file__), 'pv.html')  # PV Details
         self.charge_template_path = os.path.join(os.path.dirname(__file__), 'charge.html')
         self.heating_template_path = os.path.join(os.path.dirname(__file__), 'heating-cooling.html')
+        self.windows_template_path = os.path.join(os.path.dirname(__file__), 'windows.html')
         self.others_template_path = os.path.join(os.path.dirname(__file__), 'others.html')
         self.history_template_path = os.path.join(os.path.dirname(__file__), 'history.html')
 
@@ -72,9 +73,15 @@ class PV_Web:
         
         class PVHandler(BaseHTTPRequestHandler):
             def do_GET(self):
-                if self.path == '/api':
+                parsed_path = urlparse(self.path)
+                query_components = parse_qs(parsed_path.query)
+
+                if parsed_path.path == '/api':
                     # Daten für AJAX Abfrage
-                    raw_data = pv_web_instance.fetch_data_callback()
+                    try:
+                        raw_data = pv_web_instance.fetch_data_callback(query_components)
+                    except TypeError:
+                        raw_data = pv_web_instance.fetch_data_callback()
                     data = pv_web_instance._enrich_data(raw_data)
                     
                     self.send_response(200)
@@ -107,7 +114,7 @@ class PV_Web:
                     with open(pv_web_instance.history_template_path, 'rb') as f:
                         self.wfile.write(f.read())
 
-                elif self.path in ['/', '/pv', '/charge.html', '/heating-cooling.html', '/others.html']:
+                elif self.path in ['/', '/pv', '/charge.html', '/heating-cooling.html', '/others.html', '/windows.html']:
                     self.send_response(200)
                     self.send_header('Content-type', 'text/html; charset=utf-8')
                     self.end_headers()
@@ -118,6 +125,8 @@ class PV_Web:
                         t_path = pv_web_instance.charge_template_path
                     elif self.path == '/heating-cooling.html':
                         t_path = pv_web_instance.heating_template_path
+                    elif self.path == '/windows.html':
+                        t_path = pv_web_instance.windows_template_path
                     elif self.path == '/others.html':
                         t_path = pv_web_instance.others_template_path
                     else:

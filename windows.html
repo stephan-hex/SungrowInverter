@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fensterstatus</title>
+    <style>
+        body { font-family: sans-serif; background: #121212; color: white; text-align: center; padding: 20px; }
+        .container { max-width: 900px; margin: auto; background: #1e1e1e; padding: 20px; border-radius: 15px; }
+        .columns-wrapper { display: flex; gap: 20px; justify-content: center; align-items: flex-start; margin-top: 20px; }
+        .column { flex: 1; min-width: 280px; }
+        .status-item { background: #333; color: white; padding: 12px; margin: 8px 0; border-radius: 8px; font-size: 0.95rem; display: flex; justify-content: space-between; align-items: center; }
+        .window-open { background: #cf6679; color: black; font-weight: bold; }
+        .error-box { background: #b00020; color: white; padding: 15px; margin: 10px 0; border-radius: 10px; font-weight: bold; text-align: center; border: 2px solid #ff5252; }
+        .window-symbol { font-size: 1.2rem; font-weight: 900; }
+        .no-windows { color: #2ecc71; padding: 20px; font-weight: bold; }
+        h2 { color: #bb86fc; font-size: 1.2rem; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .shutter-val { font-weight: 900; font-size: 1.2rem; }
+        .shutter-val.normal { color: #03dac6; }
+        .shutter-val.middle { color: #ffb74d; }
+        .refresh-btn { background: #3700b3; color: white; border: none; padding: 15px 30px; border-radius: 10px; cursor: pointer; margin-top: 20px; font-size: 16px; width: 100%; }
+        .refresh-btn:active { background: #6200ee; }
+        .back-btn { display: block; width: 100%; padding: 15px; background: #34495e; color: white; border: none; border-radius: 6px; font-size: 16px; margin-top: 30px; cursor: pointer; text-align: center; text-decoration: none; font-weight: bold; box-sizing: border-box; transition: background 0.3s; }
+        .back-btn:hover { background: #2c3e50; }
+
+        /* Mobile Anpassung */
+        @media (max-width: 768px) {
+            .columns-wrapper { flex-direction: column; align-items: stretch; }
+            .column { min-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 style="color: #bb86fc;">Fenster und Beschattung</h1>
+        
+        <div class="columns-wrapper">
+            <div class="column">
+                <h2>Fenster (offen)</h2>
+                <div id="window-list">Lade Fenster...</div>
+            </div>
+            <div class="column">
+                <h2>Jalousien</h2>
+                <div id="shutter-list">Lade Jalousien...</div>
+            </div>
+        </div>
+
+        <button class="refresh-btn" onclick="fetchStatus()">Aktualisieren</button>
+        <a href="/" class="back-btn">Zurück zur Hauptseite</a>
+    </div>
+
+    <script>
+        function fetchStatus() {
+            const windowList = document.getElementById('window-list');
+            const shutterList = document.getElementById('shutter-list');
+            
+            fetch('/api?source=windows')
+                .then(response => response.json())
+                .then(data => {
+                    windowList.innerHTML = '';
+                    shutterList.innerHTML = '';
+
+                    // Fehlerprüfung
+                    if (data.homematic_error) {
+                        windowList.innerHTML = `<div class="error-box">CCU Fehler: ${data.homematic_error}</div>`;
+                        shutterList.innerHTML = '<div style="color:#666;">Status nicht verfügbar</div>';
+                        return;
+                    }
+
+                    if (!data.homematic_data || data.homematic_data.length === 0) {
+                        windowList.innerHTML = '<div class="no-windows">Keine Daten verfügbar.</div>';
+                        shutterList.innerHTML = '<div>-</div>';
+                        return;
+                    }
+
+                    // 1. Fensterkontakte (nur geöffnete anzeigen)
+                    const openWindows = data.homematic_data.filter(item => {
+                        return item.datapoint.endsWith('.STATE') && (item.value === 1 || item.value === true);
+                    });
+
+                    if (openWindows.length === 0) {
+                        windowList.innerHTML = '<div class="no-windows">Alle Fenster sind geschlossen</div>';
+                    } else {
+                        openWindows.forEach(win => {
+                            const div = document.createElement('div');
+                            div.className = 'status-item window-open';
+                            div.innerHTML = `
+                                <span>${win.device}</span>
+                            `;
+                            windowList.appendChild(div);
+                        });
+                    }
+
+                    // 2. Jalousien (alle LEVEL Datenpunkte anzeigen)
+                    const shutters = data.homematic_data.filter(item => {
+                        return item.datapoint.endsWith('.LEVEL');
+                    });
+
+                    if (shutters.length === 0) {
+                        shutterList.innerHTML = '<div>Keine Jalousien konfiguriert</div>';
+                    } else {
+                        shutters.forEach(shutter => {
+                            const percent = Math.round(shutter.value * 100);
+                            let symbol = "↔"; // Horizontaler Pfeil für Zwischenstellung
+                            let colorClass = "middle";
+                            
+                            if (percent < 20) {
+                                symbol = "↓"; // Geschlossen
+                                colorClass = "normal";
+                            } else if (percent >= 80) {
+                                symbol = "↑"; // Geöffnet
+                                colorClass = "normal";
+                            }
+
+                            const div = document.createElement('div');
+                            div.className = 'status-item';
+                            div.innerHTML = `
+                                <span>${shutter.device}</span>
+                                <span class="shutter-val ${colorClass}">${symbol}</span>
+                            `;
+                            shutterList.appendChild(div);
+                        });
+                    }
+                })
+                .catch(err => {
+                    windowList.innerHTML = '<div style="color:red">Fehler: ' + err + '</div>';
+                });
+        }
+
+        // Initialer Aufruf beim Laden der Seite
+        fetchStatus();
+        // Automatischer Refresh alle 10 Sekunden auf dieser Seite
+        setInterval(fetchStatus, 10000);
+    </script>
+</body>
+</html>

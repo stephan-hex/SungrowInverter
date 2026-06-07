@@ -144,6 +144,11 @@
             <a href="/others.html" class="nav-button">Sonstiges</a>
         </div>
 
+        <div style="margin-top: 20px; color: #888; font-size: 0.9rem; text-align: center; width: 100%;">
+            Außen: <span id="hm_outdoor_temp" style="color: #e0e0e0; font-weight: bold;">-- °C</span> | 
+            Feuchte: <span id="hm_outdoor_humidity" style="color: #e0e0e0; font-weight: bold;">-- %</span>
+        </div>
+
         <div class="status-bar">
             <span>Server: <span id="server-status">Prüfe...</span></span>
             <span>Update: <span id="val_timestamp">--:--:--</span></span>
@@ -199,6 +204,14 @@
                 document.getElementById('server-status').textContent = 'Verbunden';
                 document.getElementById('server-status').className = 'status-ok';
                 document.getElementById('val_timestamp').textContent = data.timestamp;
+
+                // Homematic Außendaten aktualisieren
+                if (data.hm_outdoor_temp) {
+                    document.getElementById('hm_outdoor_temp').textContent = data.hm_outdoor_temp;
+                }
+                if (data.hm_outdoor_humidity) {
+                    document.getElementById('hm_outdoor_humidity').textContent = data.hm_outdoor_humidity;
+                }
 
                 // Mülldaten verarbeiten
                 const rubbishWidget = document.getElementById('rubbish-widget');

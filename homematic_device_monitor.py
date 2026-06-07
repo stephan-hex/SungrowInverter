@@ -55,6 +55,11 @@ class HomematicStatusChecker:
         # Nimmt nur Datenpunkte auf, die "LOW_BAT" oder "LOWBAT" im Namen haben
         return self._fetch_filtered_data(config_file, lambda name: "LOW_BAT" in name.upper() or "LOWBAT" in name.upper(), "Batteriestatus (LOW_BAT)")
 
+    def fetch_temperature_data(self, config_file):
+        """Fragt gezielt Datenpunkte für Temperatur und Luftfeuchtigkeit ab."""
+        # Filtert auf ACTUAL_TEMPERATURE oder HUMIDITY
+        return self._fetch_filtered_data(config_file, lambda name: "ACTUAL_TEMPERATURE" in name.upper() or "HUMIDITY" in name.upper(), "Temperatur & Luftfeuchtigkeit")
+
     def _fetch_filtered_data(self, config_file, name_filter, label):
         """Interne Methode zum Abrufen gefilterter Datenpunkte."""
         if not os.path.exists(config_file):

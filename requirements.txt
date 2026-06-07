@@ -1,3 +1,4 @@
 pymodbus>=3.0.0
 matplotlib>=3.0.0
+requests>=2.28.0
 # sqlite3, tkinter und json sind Teil der Python Standardbibliothek

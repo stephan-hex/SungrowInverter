@@ -58,6 +58,7 @@ except Exception as e:
     hm_checker = None
 
 homematic_data_cache = []
+homematic_temp_cache = []
 homematic_error_cache = None
 last_hm_request_time = 0
 hm_request_event = threading.Event()
@@ -276,6 +277,14 @@ def read_modbus_data_callback():
     # Homematic Daten hinzufügen
     last_data_cache['homematic_data'] = homematic_data_cache
     last_data_cache['homematic_error'] = homematic_error_cache
+
+    # Spezifische Werte für Außen-Temp extrahieren
+    for item in homematic_temp_cache:
+        if item['device'] == "Außen-Temp":
+            if "ACTUAL_TEMPERATURE" in item['datapoint']:
+                last_data_cache['hm_outdoor_temp'] = f"{item['value']:.1f} °C"
+            elif "HUMIDITY" in item['datapoint']:
+                last_data_cache['hm_outdoor_humidity'] = f"{item['value']} %"
     
     return last_data_cache
 
@@ -336,6 +345,19 @@ def homematic_poll_loop():
                 break
             if hm_request_event.is_set():
                 hm_request_event.clear()
+
+def homematic_temp_loop():
+    """Hintergrund-Thread für Temperatur-Polling (alle 5 Minuten)."""
+    global homematic_temp_cache, homematic_error_cache
+    print("[HomematicTempThread] Temperatur-Polling gestartet (Intervall: 300s).")
+    while running:
+        if hm_checker:
+            data = hm_checker.fetch_temperature_data(HOMEMATIC_CONFIG)
+            # Fehlerzustand wird hier nicht überschrieben, um Windows-Status nicht zu stören
+            if data:
+                homematic_temp_cache = data
+        # 5 Minuten warten
+        stop_event.wait(timeout=300)
 
 def get_cached_data(params=None):
     """Gibt den zuletzt gepollteten Datensatz zurück (kein Modbus-Zugriff)."""
@@ -434,6 +456,10 @@ def main():
     # Homematic-Thread starten
     hm_thread = threading.Thread(target=homematic_poll_loop, daemon=True)
     hm_thread.start()
+    
+    # Homematic-Temperatur-Thread starten
+    hm_temp_thread = threading.Thread(target=homematic_temp_loop, daemon=True)
+    hm_temp_thread.start()
     
     print(f"Programm läuft. Daten werden alle {POLL_INTERVAL}s abgerufen. Drücke STRG+C zum Beenden.")
     

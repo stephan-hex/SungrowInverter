@@ -1,4 +1,4 @@
-pipimport requests
+import requests
 import json
 import os
 

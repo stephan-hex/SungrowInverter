@@ -8,6 +8,8 @@ import time
 import threading
 import signal
 import datetime
+import urllib.request
+import json
 from ESP32_Sensor_Reader import ESP32SensorReader
 from RubbishCollection import RubbishCollection
 from fritz_control import FritzControl
@@ -45,6 +47,33 @@ except:
 
 # Globaler Cache für Fritzbox-Zustände (wird vom Hintergrund-Thread befüllt)
 fritz_data_cache = {'fritz_zisterne': 'inval', 'fritz_brunnen': 'inval', 'fritz_reserve': 'inval'}
+
+# --- Go-eCharger Integration ---
+GOE_CONTROL_URL = "http://localhost:8081/api/status"
+GOE_SET_URL = "http://localhost:8081/api/set"
+goe_data_cache = {
+    'goe_p_total': '0 W',
+    'goe_session_wh': '0 Wh',
+    'goe_car_status': 'Unknown',
+    'goe_action': 'idle'
+}
+
+def goe_poll_loop():
+    """Hintergrund-Thread für das Go-eCharger-Polling."""
+    global goe_data_cache
+    print("[GoEThread] Hintergrund-Polling gestartet.")
+    while running:
+        try:
+            with urllib.request.urlopen(GOE_CONTROL_URL, timeout=5) as resp:
+                data = json.loads(resp.read().decode())
+                goe_data_cache['goe_p_total'] = f"{data.get('total_p_watt', 0)} W"
+                goe_data_cache['goe_session_wh'] = f"{data.get('wh', 0)} Wh"
+                goe_data_cache['goe_car_status'] = data.get('car_status', 'Unknown')
+                goe_data_cache['goe_action'] = data.get('action', 'idle')
+        except Exception as e:
+            # print(f"[GoEThread] Fehler beim Abrufen der Go-e Daten: {e}")
+            pass
+        stop_event.wait(timeout=5)
 
 # --- Homematic Integration ---
 try:
@@ -265,6 +294,9 @@ def read_modbus_data_callback():
     # Fritz-Zustände aus dem Hintergrund-Cache in den Haupt-Cache mergen
     last_data_cache.update(fritz_data_cache)
     
+    # Go-e Daten hinzufügen
+    last_data_cache.update(goe_data_cache)
+    
     # ESP32-Zustände mergen
     last_data_cache.update(esp_data_cache)
     
@@ -410,6 +442,21 @@ def handle_web_action(command):
         CHARGE_MODE = "INTELLIGENT-CHARGING"
         save_config()
     
+    elif command in ["goe_start", "goe_stop"]:
+        # Bei manuellem Start/Stop in den Normal-Modus wechseln
+        CHARGE_MODE = "NORMAL-CHARGING"
+        save_config()
+        
+        # Befehl an Go-e Skript weiterleiten
+        goe_cmd = "start" if command == "goe_start" else "stop"
+        try:
+            req = urllib.request.Request(GOE_SET_URL, data=json.dumps({"command": goe_cmd}).encode('utf-8'), method='POST')
+            req.add_header('Content-Type', 'application/json')
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                print(f"Go-e Command '{goe_cmd}' Result: {resp.read().decode()}")
+        except Exception as e:
+            print(f"Fehler beim Senden des Go-e Commands: {e}")
+
     # Beispiel für Fritz!Box Befehle (AIN aus fritz_config.json oder direkt)
     elif command.startswith("fritz_"):
         # Format: fritz_LOGISCHERNAME_on oder fritz_LOGISCHERNAME_off
@@ -460,6 +507,10 @@ def main():
     # Fritz-Polling-Thread starten
     fritz_thread = threading.Thread(target=fritz_poll_loop, daemon=True)
     fritz_thread.start()
+    
+    # Go-e-Polling-Thread starten
+    goe_thread = threading.Thread(target=goe_poll_loop, daemon=True)
+    goe_thread.start()
     
     # ESP32-Thread starten
     esp_thread = threading.Thread(target=esp32_poll_loop, daemon=True)

@@ -32,7 +32,8 @@ current_status_data = {
     "pv_soc": 0,
     "pv_dc_power": 0,
     "charge_mode": "",
-    "current_amps": CHARGING_AMPS
+    "current_amps": CHARGING_AMPS,
+    "total_p_watt": 0
 }
 
 class StatusAPIHandler(BaseHTTPRequestHandler):
@@ -45,6 +46,31 @@ class StatusAPIHandler(BaseHTTPRequestHandler):
         else:
             self.send_error(404)
     
+    def do_POST(self):
+        if self.path == '/api/set':
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data.decode('utf-8'))
+                command = data.get('command')
+                if command == 'start':
+                    set_goe_charging(True, 16) # Start mit Standard 16A im manuellen Modus
+                    response = {"status": "ok", "message": "Charging started"}
+                elif command == 'stop':
+                    set_goe_charging(False)
+                    response = {"status": "ok", "message": "Charging stopped"}
+                else:
+                    response = {"status": "error", "message": "Unknown command"}
+                
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps(response).encode('utf-8'))
+            except Exception as e:
+                self.send_error(400, str(e))
+        else:
+            self.send_error(404)
+
     def log_message(self, format, *args):
         pass # Kein Konsolen-Log für Requests
 
@@ -83,8 +109,8 @@ def get_pv_data():
 def get_goe_status():
     """Holt den aktuellen Status vom Go-eCharger."""
     try:
-        # Filtert die API auf die relevanten Felder inkl. psm (Phase Switch Mode)
-        url = f"http://{GOE_IP}/api/status?filter=car,wh,alw,eto,pnp,psm"
+        # Filtert die API auf die relevanten Felder inkl. psm (Phase Switch Mode) und nrg (Energie/Leistung)
+        url = f"http://{GOE_IP}/api/status?filter=car,wh,alw,eto,pnp,psm,nrg"
         with urllib.request.urlopen(url, timeout=5) as response:
             return json.loads(response.read().decode())
     except Exception as e:
@@ -183,7 +209,14 @@ def main():
                 current_status_data["alw"] = goe_status.get('alw', 0)
                 current_status_data["pnp"] = goe_status.get('pnp', 0)
                 
-                status_info = f"SOC: {soc:.1f}%, Mode: {charge_mode}, Car: {car_status_text}, Phasen: {current_psm}, Amp: {active_amps}A"
+                # Gesamtleistung extrahieren (nrg[11] = p_total in Watt)
+                nrg = goe_status.get('nrg', [])
+                if len(nrg) > 11:
+                    current_status_data["total_p_watt"] = nrg[11]
+                else:
+                    current_status_data["total_p_watt"] = 0
+
+                status_info = f"SOC: {soc:.1f}%, Mode: {charge_mode}, Car: {car_status_text}, Phasen: {current_psm}, Power: {current_status_data['total_p_watt']}W"
                 
                 # Ausgabe des aktuellen Status bei jedem Intervall
                 print(f"[{timestamp}] {status_info}")

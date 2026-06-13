@@ -23,12 +23,13 @@
             background: #1e1e1e;
             display: flex;
             flex-direction: column;
-            padding: 25px 25px 0 25px;
+            padding: 25px;
             box-sizing: border-box;
             box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            overflow-y: auto;
         }
         h2 { border-bottom: 1px solid #333; padding-bottom: 10px; color: #ffffff; margin-top: 0; }
-        .section-title { font-size: 18px; text-transform: uppercase; letter-spacing: 1px; color: #bbb; text-align: center; }
+        .section-title { font-size: 16px; text-transform: uppercase; letter-spacing: 1px; color: #bbb; text-align: center; margin-bottom: 15px; }
         
         /* Schiebeschalter Styling */
         .switch { position: relative; display: inline-block; width: 60px; height: 34px; }
@@ -38,29 +39,73 @@
         input:checked + .slider { background-color: #2ecc71; }
         input:checked + .slider:before { transform: translateX(26px); }
 
-        .back-btn { display: block; width: 100%; padding: 15px; background: #34495e; color: white; border: none; border-radius: 6px; font-size: 16px; margin-top: 30px; cursor: pointer; text-align: center; text-decoration: none; font-weight: bold; transition: background 0.3s; box-sizing: border-box; }
+        .back-btn { display: block; width: 100%; padding: 15px; background: #34495e; color: white; border: none; border-radius: 6px; font-size: 16px; margin-top: 20px; cursor: pointer; text-align: center; text-decoration: none; font-weight: bold; transition: background 0.3s; box-sizing: border-box; }
         .back-btn:hover { background: #2c3e50; }
 
-        .status-ok { color: #2ecc71; font-weight: bold; }
-        .status-error { color: #e74c3c; font-weight: bold; }
+        .card { background: #252525; border-radius: 12px; border: 1px solid #333; padding: 20px; margin-bottom: 20px; }
+        .data-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .data-label { color: #888; font-size: 0.9rem; }
+        .data-value { font-weight: bold; font-size: 1.1rem; color: #fff; }
+        .big-value { font-size: 2.2rem; color: #2ecc71; text-align: center; margin: 10px 0; font-weight: bold; }
+
+        .btn-group { display: flex; gap: 10px; margin-top: 20px; }
+        .btn { flex: 1; padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1rem; transition: transform 0.1s; }
+        .btn:active { transform: scale(0.95); }
+        .btn-start { background: #27ae60; color: white; }
+        .btn-stop { background: #c0392b; color: white; }
+        
+        .status-badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; background: #444; color: #fff; }
+        .status-charging { background: #27ae60; }
     </style>
 </head>
 <body>
     <div class="container">
         <h2>Wallbox Ladesteuerung</h2>
         
-        <div style="margin-top: 40px; padding: 30px; background: #252525; border-radius: 8px; border: 1px solid #333;">
-            <div class="section-title">Wallbox-Lademodus</div>
-            <div style="display: flex; justify-content: center; align-items: center; gap: 20px; margin-top: 25px;">
-                <span style="font-weight: bold; color: #ccc; font-size: 1.1rem;">Normal</span>
+        <!-- Live Anzeige -->
+        <div class="card">
+            <div class="section-title">Aktueller Ladevorgang</div>
+            <div class="big-value" id="val_goe_p_total">0 W</div>
+            
+            <div class="data-row">
+                <span class="data-label">Geladen (Session)</span>
+                <span class="data-value" id="val_goe_session_wh">0 Wh</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">Fahrzeugstatus</span>
+                <span class="data-value" id="val_goe_car_status">Unbekannt</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">Automatik-Aktion</span>
+                <span class="data-value" id="val_goe_action">idle</span>
+            </div>
+        </div>
+
+        <!-- Modus Auswahl -->
+        <div class="card">
+            <div class="section-title">Lademodus</div>
+            <div style="display: flex; justify-content: center; align-items: center; gap: 20px; margin: 10px 0;">
+                <span style="font-weight: bold; color: #ccc;">Normal</span>
                 <label class="switch">
                     <input type="checkbox" id="mode-toggle" onchange="toggleMode(this)">
                     <span class="slider"></span>
                 </label>
-                <span style="font-weight: bold; color: #ccc; font-size: 1.1rem;">Intelligent</span>
+                <span style="font-weight: bold; color: #ccc;">Intelligent</span>
             </div>
-            <div style="margin-top:25px; text-align: center; color: #bbb;">
-                Aktueller Status: <span id="val_charge_mode" style="font-weight: bold; color: #fff;">Lade...</span>
+            <div style="text-align: center; margin-top: 10px;">
+                <span id="val_charge_mode" class="status-badge">NORMAL-CHARGING</span>
+            </div>
+        </div>
+
+        <!-- Manuelle Steuerung -->
+        <div class="card">
+            <div class="section-title">Manuelle Steuerung</div>
+            <div style="color: #888; font-size: 0.8rem; text-align: center; margin-bottom: 10px;">
+                (Deaktiviert den Intelligent-Modus)
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-start" onclick="sendCommand('goe_start')">START</button>
+                <button class="btn btn-stop" onclick="sendCommand('goe_stop')">STOP</button>
             </div>
         </div>
 
@@ -72,31 +117,57 @@
             try {
                 const response = await fetch('/api');
                 const data = await response.json();
-                document.getElementById('val_charge_mode').textContent = data.charge_mode;
                 
+                // Modus
+                document.getElementById('val_charge_mode').textContent = data.charge_mode;
                 const toggleEl = document.getElementById('mode-toggle');
                 if (toggleEl) {
                     toggleEl.checked = (data.charge_mode === 'INTELLIGENT-CHARGING');
                 }
+
+                // Go-e Live Daten
+                document.getElementById('val_goe_p_total').textContent = data.goe_p_total || '0 W';
+                document.getElementById('val_goe_session_wh').textContent = data.goe_session_wh || '0 Wh';
+                document.getElementById('val_goe_car_status').textContent = data.goe_car_status || 'Unbekannt';
+                document.getElementById('val_goe_action').textContent = data.goe_action || 'idle';
+
+                // Status Farbe
+                const statusEl = document.getElementById('val_goe_car_status');
+                if (data.goe_car_status === 'Charging') {
+                    statusEl.style.color = '#27ae60';
+                } else {
+                    statusEl.style.color = '#fff';
+                }
+
             } catch (e) { console.error("Fetch error", e); }
         }
 
         function toggleMode(checkbox) {
             const isIntelligent = checkbox.checked;
             const command = isIntelligent ? 'mode_surplus' : 'mode_normal';
-            
-            // Sofortiges UI-Feedback
-            document.getElementById('val_charge_mode').textContent = isIntelligent ? 'INTELLIGENT-CHARGING' : 'NORMAL-CHARGING';
+            sendCommand(command);
+        }
+
+        function sendCommand(command) {
+            // UI Feedback
+            if (command === 'mode_surplus') document.getElementById('val_charge_mode').textContent = 'INTELLIGENT-CHARGING';
+            if (command === 'mode_normal' || command.startsWith('goe_')) {
+                document.getElementById('val_charge_mode').textContent = 'NORMAL-CHARGING';
+                const toggleEl = document.getElementById('mode-toggle');
+                if (toggleEl) toggleEl.checked = false;
+            }
 
             fetch('/action', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({command: command})
-            }).catch(e => console.error("Aktion fehlgeschlagen", e));
+            })
+            .then(() => setTimeout(fetchData, 500))
+            .catch(e => console.error("Aktion fehlgeschlagen", e));
         }
 
-        setInterval(fetchData, 5000);
-        fetchData(); // Sofortiger Aufruf beim Laden
+        setInterval(fetchData, 3000);
+        fetchData();
     </script>
 </body>
 </html>

@@ -65,19 +65,15 @@
         <!-- Live Anzeige -->
         <div class="card">
             <div class="section-title">Aktueller Ladevorgang</div>
-            <div class="big-value" id="val_goe_p_total">0 W</div>
+            <div class="big-value" id="val_goe_p_total">0.0 kW</div>
             
             <div class="data-row">
                 <span class="data-label">Geladen (Session)</span>
-                <span class="data-value" id="val_goe_session_wh">0 Wh</span>
+                <span class="data-value" id="val_goe_session_wh">0.0 kWh</span>
             </div>
             <div class="data-row">
                 <span class="data-label">Fahrzeugstatus</span>
                 <span class="data-value" id="val_goe_car_status">Unbekannt</span>
-            </div>
-            <div class="data-row">
-                <span class="data-label">Automatik-Aktion</span>
-                <span class="data-value" id="val_goe_action">idle</span>
             </div>
         </div>
 
@@ -126,10 +122,9 @@
                 }
 
                 // Go-e Live Daten
-                document.getElementById('val_goe_p_total').textContent = data.goe_p_total || '0 W';
-                document.getElementById('val_goe_session_wh').textContent = data.goe_session_wh || '0 Wh';
+                document.getElementById('val_goe_p_total').textContent = data.goe_p_total || '0.0 kW';
+                document.getElementById('val_goe_session_wh').textContent = data.goe_session_wh || '0.0 kWh';
                 document.getElementById('val_goe_car_status').textContent = data.goe_car_status || 'Unbekannt';
-                document.getElementById('val_goe_action').textContent = data.goe_action || 'idle';
 
                 // Status Farbe
                 const statusEl = document.getElementById('val_goe_car_status');

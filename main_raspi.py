@@ -52,8 +52,8 @@ fritz_data_cache = {'fritz_zisterne': 'inval', 'fritz_brunnen': 'inval', 'fritz_
 GOE_CONTROL_URL = "http://localhost:8081/api/status"
 GOE_SET_URL = "http://localhost:8081/api/set"
 goe_data_cache = {
-    'goe_p_total': '0 W',
-    'goe_session_wh': '0 Wh',
+    'goe_p_total': '0.0 kW',
+    'goe_session_wh': '0.0 kWh',
     'goe_car_status': 'Unknown',
     'goe_action': 'idle'
 }
@@ -66,8 +66,8 @@ def goe_poll_loop():
         try:
             with urllib.request.urlopen(GOE_CONTROL_URL, timeout=5) as resp:
                 data = json.loads(resp.read().decode())
-                goe_data_cache['goe_p_total'] = f"{data.get('total_p_watt', 0)} W"
-                goe_data_cache['goe_session_wh'] = f"{data.get('wh', 0)} Wh"
+                goe_data_cache['goe_p_total'] = f"{(data.get('total_p_watt', 0) / 1000.0):.1f} kW"
+                goe_data_cache['goe_session_wh'] = f"{(data.get('wh', 0) / 1000.0):.1f} kWh"
                 goe_data_cache['goe_car_status'] = data.get('car_status', 'Unknown')
                 goe_data_cache['goe_action'] = data.get('action', 'idle')
         except Exception as e:

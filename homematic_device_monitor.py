@@ -138,7 +138,7 @@ class HomematicStatusChecker:
         with open(config_file, "r", encoding="utf-8") as f:
             config = json.load(f)
 
-        rega_script = "object o_level; object o_slats;"
+        rega_script = "object o_level; object o_comb;"
         shutter_count = 0
 
         # Finde LEVEL-Datenpunkte in der Config
@@ -151,12 +151,13 @@ class HomematicStatusChecker:
             interface = device.get("interface", "HmIP-RF")
             
             # Bei HmIP Jalousieaktoren steuern wir über Kanal 4 (Steuerkanal)
-            target_level = f"{interface}.{addr}:4.LEVEL"
-            target_slats = f"{interface}.{addr}:4.LEVEL_2"
-            
-            rega_script += f'\no_level = dom.GetObject("{target_level}"); if(o_level){{o_level.State({level});}}'
             if slats_level is not None:
-                rega_script += f'\no_slats = dom.GetObject("{target_slats}"); if(o_slats){{o_slats.State({slats_level});}}'
+                # Nutze COMBINED_PARAMETER für gleichzeitige Behang- und Lamellensteuerung
+                target_combined = f"{interface}.{addr}:4.COMBINED_PARAMETER"
+                rega_script += f'\no_comb = dom.GetObject("{target_combined}"); if(o_comb){{o_comb.State("L={level:.2f},L2={slats_level:.2f}");}}'
+            else:
+                target_level = f"{interface}.{addr}:4.LEVEL"
+                rega_script += f'\no_level = dom.GetObject("{target_level}"); if(o_level){{o_level.State({level});}}'
                 
             shutter_count += 1
 

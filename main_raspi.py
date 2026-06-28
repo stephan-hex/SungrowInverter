@@ -473,6 +473,10 @@ def handle_web_action(command):
                         if success:
                             # Sofort den Cache aktualisieren, damit das UI nicht zurückspringt
                             fritz_data_cache[f"fritz_{device_key}"] = "1" if state == "on" else "0"
+    
+    elif command == "shutters_up":
+        if hm_checker:
+            hm_checker.set_all_shutters_level(1.0, HOMEMATIC_CONFIG)
 
 def get_history_data(date_str=None, cols=None):
     """Callback für Chart-Daten"""

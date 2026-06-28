@@ -125,6 +125,45 @@ class HomematicStatusChecker:
             
         return results
 
+    def set_all_shutters_level(self, level, config_file):
+        """
+        Setzt Jalousien auf einen Zielwert (z.B. 1.0 für komplett geöffnet / hoch).
+        Im aktuellen Testbetrieb ist die Steuerung auf das Gerät 'Wohnen 2er' beschränkt.
+        """
+        if not os.path.exists(config_file):
+            print(f"Fehler: Konfigurationsdatei {config_file} nicht gefunden.")
+            return False
+
+        with open(config_file, "r", encoding="utf-8") as f:
+            config = json.load(f)
+
+        rega_script = "object o;"
+        shutter_count = 0
+
+        # Finde LEVEL-Datenpunkte in der Config
+        for device in config.get("devices", []):
+            # Test-Filter: Vorerst nur Wohnen 2er ansteuern
+            if device.get("name") != "Wohnen 2er":
+                continue
+
+            addr = device.get("address")
+            interface = device.get("interface", "HmIP-RF")
+            for dp in device.get("datapoints", []):
+                dp_name = dp.get("name")
+                if dp_name == "LEVEL":
+                    chan = dp.get("channel")
+                    target = f"{interface}.{addr}:{chan}.{dp_name}"
+                    rega_script += f'\no = dom.GetObject("{target}"); if(o){{o.State({level});}}'
+                    shutter_count += 1
+
+        if shutter_count == 0:
+            print("Jalousie 'Wohnen 2er' (LEVEL) nicht in Konfiguration gefunden.")
+            return False
+
+        print(f"[Homematic] Sende Fahrbefehl (Ziel: {level}) an {shutter_count} Jalousie(n)...")
+        raw_output = self._execute_rega_script(rega_script)
+        return raw_output is not None
+
 if __name__ == "__main__":
     # Ermittelt den Pfad relativ zum Standort dieses Skripts
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))

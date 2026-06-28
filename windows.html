@@ -20,6 +20,8 @@
         .shutter-val.middle { color: #ffb74d; }
         .refresh-btn { background: #3700b3; color: white; border: none; padding: 15px 30px; border-radius: 10px; cursor: pointer; margin-top: 20px; font-size: 16px; width: 100%; }
         .refresh-btn:active { background: #6200ee; }
+        .shutter-up-btn { background: #03dac6; color: black; border: none; padding: 15px 30px; border-radius: 10px; cursor: pointer; margin-top: 15px; font-size: 16px; font-weight: bold; width: 100%; transition: background-color 0.2s; }
+        .shutter-up-btn:active { background: #018786; color: white; }
         .back-btn { display: block; width: 100%; padding: 15px; background: #34495e; color: white; border: none; border-radius: 6px; font-size: 16px; margin-top: 30px; cursor: pointer; text-align: center; text-decoration: none; font-weight: bold; box-sizing: border-box; transition: background 0.3s; }
         .back-btn:hover { background: #2c3e50; }
 
@@ -46,6 +48,7 @@
         </div>
 
         <button class="refresh-btn" onclick="fetchStatus()">Aktualisieren</button>
+        <button class="shutter-up-btn" onclick="allShuttersUp()">Jalousie Wohnen 2er hochfahren</button>
         <a href="/" class="back-btn">Zurück zur Hauptseite</a>
     </div>
 
@@ -125,6 +128,26 @@
                 .catch(err => {
                     windowList.innerHTML = '<div style="color:red">Fehler: ' + err + '</div>';
                 });
+        }
+
+        function allShuttersUp() {
+            if (confirm("Möchtest du die Jalousie 'Wohnen 2er' hochfahren?")) {
+                fetch('/action', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ command: 'shutters_up' })
+                })
+                .then(response => response.text())
+                .then(msg => {
+                    alert(msg);
+                    setTimeout(fetchStatus, 2000);
+                })
+                .catch(err => {
+                    alert("Fehler beim Steuern: " + err);
+                });
+            }
         }
 
         // Initialer Aufruf beim Laden der Seite

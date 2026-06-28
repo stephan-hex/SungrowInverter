@@ -125,9 +125,10 @@ class HomematicStatusChecker:
             
         return results
 
-    def set_all_shutters_level(self, level, config_file):
+    def set_all_shutters_level(self, level, config_file, slats_level=None):
         """
         Setzt Jalousien auf einen Zielwert (z.B. 1.0 für komplett geöffnet / hoch).
+        Unterstützt optional die Einstellung des Lamellenwinkels (slats_level).
         Im aktuellen Testbetrieb ist die Steuerung auf das Gerät 'Wohnen 2er' beschränkt.
         """
         if not os.path.exists(config_file):
@@ -137,7 +138,7 @@ class HomematicStatusChecker:
         with open(config_file, "r", encoding="utf-8") as f:
             config = json.load(f)
 
-        rega_script = "object o;"
+        rega_script = "object o_level; object o_slats;"
         shutter_count = 0
 
         # Finde LEVEL-Datenpunkte in der Config
@@ -148,21 +149,25 @@ class HomematicStatusChecker:
 
             addr = device.get("address")
             interface = device.get("interface", "HmIP-RF")
-            for dp in device.get("datapoints", []):
-                dp_name = dp.get("name")
-                if dp_name == "LEVEL":
-                    chan = dp.get("channel")
-                    target = f"{interface}.{addr}:{chan}.{dp_name}"
-                    rega_script += f'\no = dom.GetObject("{target}"); if(o){{o.State({level});}}'
-                    shutter_count += 1
+            
+            # Bei HmIP Jalousieaktoren steuern wir über Kanal 4 (Steuerkanal)
+            target_level = f"{interface}.{addr}:4.LEVEL"
+            target_slats = f"{interface}.{addr}:4.LEVEL_2"
+            
+            rega_script += f'\no_level = dom.GetObject("{target_level}"); if(o_level){{o_level.State({level});}}'
+            if slats_level is not None:
+                rega_script += f'\no_slats = dom.GetObject("{target_slats}"); if(o_slats){{o_slats.State({slats_level});}}'
+                
+            shutter_count += 1
 
         if shutter_count == 0:
             print("Jalousie 'Wohnen 2er' (LEVEL) nicht in Konfiguration gefunden.")
             return False
 
-        print(f"[Homematic] Sende Fahrbefehl (Ziel: {level}) an {shutter_count} Jalousie(n)...")
+        print(f"[Homematic] Sende Fahrbefehl (Ziel: {level}, Lamellen: {slats_level}) an {shutter_count} Jalousie(n)...")
         raw_output = self._execute_rega_script(rega_script)
         return raw_output is not None
+
 
 if __name__ == "__main__":
     # Ermittelt den Pfad relativ zum Standort dieses Skripts

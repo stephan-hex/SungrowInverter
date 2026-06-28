@@ -35,6 +35,9 @@ DEBUG_FRITZ = False
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), 'main_config.json')
 CHARGE_MODE = "NORMAL-CHARGING" # Default: Normal (Links), Intelligent (Rechts)
 
+# Homematic Jalousie-Einstellungen
+SHUTTER_DOWN_SLAT_LEVEL = 0.4  # Lamellenstellung auf 40% beim Herunterfahren
+
 # --- Fritz!Box Integration für Web-Zentrale ---
 try:
     _fritz_cfg_path = os.path.join(os.path.dirname(__file__), "fritz_config.json")
@@ -477,6 +480,10 @@ def handle_web_action(command):
     elif command == "shutters_up":
         if hm_checker:
             hm_checker.set_all_shutters_level(1.0, HOMEMATIC_CONFIG)
+            
+    elif command == "shutters_down":
+        if hm_checker:
+            hm_checker.set_all_shutters_level(0.0, HOMEMATIC_CONFIG, slats_level=SHUTTER_DOWN_SLAT_LEVEL)
 
 def get_history_data(date_str=None, cols=None):
     """Callback für Chart-Daten"""

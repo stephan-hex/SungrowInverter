@@ -168,6 +168,40 @@ class HomematicStatusChecker:
         raw_output = self._execute_rega_script(rega_script)
         return raw_output is not None
 
+    def stop_all_shutters(self, config_file):
+        """
+        Stoppt alle Jalousien durch Setzen des STOP-Datenpunkts auf True.
+        Im aktuellen Testbetrieb ist dies auf 'Wohnen 2er' beschränkt.
+        """
+        if not os.path.exists(config_file):
+            print(f"Fehler: Konfigurationsdatei {config_file} nicht gefunden.")
+            return False
+
+        with open(config_file, "r", encoding="utf-8") as f:
+            config = json.load(f)
+
+        rega_script = "object o;"
+        shutter_count = 0
+
+        # Finde Jalousien in der Config
+        for device in config.get("devices", []):
+            if device.get("name") != "Wohnen 2er":
+                continue
+
+            addr = device.get("address")
+            interface = device.get("interface", "HmIP-RF")
+            target = f"{interface}.{addr}:4.STOP"
+            rega_script += f'\no = dom.GetObject("{target}"); if(o){{o.State(true);}}'
+            shutter_count += 1
+
+        if shutter_count == 0:
+            print("Jalousie 'Wohnen 2er' nicht in Konfiguration gefunden.")
+            return False
+
+        print(f"[Homematic] Sende Stopp-Befehl an {shutter_count} Jalousie(n)...")
+        raw_output = self._execute_rega_script(rega_script)
+        return raw_output is not None
+
 
 if __name__ == "__main__":
     # Ermittelt den Pfad relativ zum Standort dieses Skripts

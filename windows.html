@@ -25,6 +25,8 @@
         .shutter-control-btn.up:active { background: #018786; color: white; }
         .shutter-control-btn.down { background: #ffb74d; color: black; }
         .shutter-control-btn.down:active { background: #f57c00; color: white; }
+        .shutter-control-btn.stop { background: #e74c3c; color: white; }
+        .shutter-control-btn.stop:active { background: #c0392b; }
         .back-btn { display: block; width: 100%; padding: 15px; background: #34495e; color: white; border: none; border-radius: 6px; font-size: 16px; margin-top: 30px; cursor: pointer; text-align: center; text-decoration: none; font-weight: bold; box-sizing: border-box; transition: background 0.3s; }
         .back-btn:hover { background: #2c3e50; }
 
@@ -53,6 +55,7 @@
         <button class="refresh-btn" onclick="fetchStatus()">Aktualisieren</button>
         <button class="shutter-control-btn up" onclick="controlShutters('up')">↑ alle Jalousien hoch</button>
         <button class="shutter-control-btn down" onclick="controlShutters('down')">↓ alle Jalousien runter</button>
+        <button class="shutter-control-btn stop" onclick="controlShutters('stop')">Stopp</button>
         <a href="/" class="back-btn">Zurück zur Hauptseite</a>
     </div>
 
